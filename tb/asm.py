@@ -2,9 +2,10 @@
 # @Author: kostya
 # @Date:   2021-11-15 15:18:12
 # @Last Modified by:   kostya
-# @Last Modified time: 2021-11-16 01:24:07
+# @Last Modified time: 2021-11-17 15:28:08
 
 import sys
+import platform
 
 REGISTER_NUMBER = 32
 IMMIDIATE_LIMIT = 255
@@ -12,6 +13,10 @@ IMMIDIATE_LIMIT = 255
 
 class Color(object):
     def __init__(self):
+        if platform.system() == 'Windows':
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
         self.BLACK  = "\033[1;90m"
         self.RED    = "\033[1;91m"
         self.GREEN  = "\033[1;92m"
@@ -108,7 +113,7 @@ class Instruction(object):
         self.const = 0
 
     def compile(self):
-        return bin_extend(self.B, 1) \
+        bin_code =  bin_extend(self.B, 1) \
                + bin_extend(self.C, 1) \
                + bin_extend(self.WE, 1) \
                + bin_extend(self.WS, 2) \
@@ -117,24 +122,27 @@ class Instruction(object):
                + bin_extend(self.RA2, 5) \
                + bin_extend(self.WA, 5) \
                + bin_extend(self.const, 8)
+        hex_code = hex(int(bin_code, 2))[2:]
+        hex_code = '0' * (8 - len(hex_code)) + hex_code
+        return hex_code
 
 
 class _ALU(object):
     def __init__(self):
-        self.ALU_ADD = 0
-        self.ALU_SUB = 1
-        self.ALU_XOR = 2
-        self.ALU_OR = 3
-        self.ALU_AND = 4
-        self.ALU_SRA = 5
-        self.ALU_SRL = 6
-        self.ALU_SLL = 7
-        self.ALU_LTS = 8
-        self.ALU_LTU = 9
-        self.ALU_GES = 10
-        self.ALU_GEU = 11
-        self.ALU_EQ = 12
-        self.ALU_NE = 13
+        self.ALU_ADD = 0b0000
+        self.ALU_SUB = 0b0001
+        self.ALU_XOR = 0b0010
+        self.ALU_OR  = 0b0011
+        self.ALU_AND = 0b0100
+        self.ALU_SRA = 0b0101
+        self.ALU_SRL = 0b0110
+        self.ALU_SLL = 0b0111
+        self.ALU_LTS = 0b1000
+        self.ALU_LTU = 0b1001
+        self.ALU_GES = 0b1010
+        self.ALU_GEU = 0b1011
+        self.ALU_EQ  = 0b1100
+        self.ALU_NE  = 0b1101
 
         self.ops = {
             'add': self.ALU_ADD,
@@ -374,6 +382,8 @@ def contains_only(st, available):
 
 
 def bin_extend(num, cnt):
+    if num < 0:
+        num = pow(2, cnt) + num
     st = bin(num)[2:]
     return '0' * (cnt - len(st)) + st
 
