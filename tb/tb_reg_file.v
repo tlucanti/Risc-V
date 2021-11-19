@@ -21,7 +21,7 @@ initial begin
 	  @(negedge clk);
 	end
 	reset = 0;
-	#200;
+	#1000;
 	
 	$finish();
 end

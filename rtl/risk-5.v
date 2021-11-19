@@ -112,7 +112,7 @@ miriscv_alu	ALU (
 );
 
 // assign wd = get_write_source(instr);
-assign wd = instr[28] ? alu : bit_extend(instr[7:0]);
+assign wd = instr[28] ? alu : (instr[27] ? sw : bit_extend(instr[7:0]));
 
 always @(posedge clk) begin
 	if (rst) begin
@@ -122,7 +122,7 @@ always @(posedge clk) begin
 		if (instr[31] || (instr[30] && flag))	// jump instruction
 			pc <= pc + bit_extend(instr[7:0]);	// add immidiate to program counter
 		else
-			pc <= pc + 31'b1;							// not jump
+			pc <= pc + 31'b1;							// dont jump
 	end
 end
 

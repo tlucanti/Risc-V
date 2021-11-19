@@ -2,7 +2,7 @@
 # @Author: kostya
 # @Date:   2021-11-15 15:18:12
 # @Last Modified by:   kostya
-# @Last Modified time: 2021-11-18 15:34:35
+# @Last Modified time: 2021-11-19 16:58:37
 
 import sys
 import platform
@@ -176,9 +176,9 @@ class _ALU(object):
             'sra': self.ALU_SRA,
             'srl': self.ALU_SRL,
             'sll': self.ALU_SLL,
-            'lts': self.ALU_LTS,
+            'lt' : self.ALU_LTS,
             'ltu': self.ALU_LTU,
-            'ges': self.ALU_GES,
+            'ge' : self.ALU_GES,
             'geu': self.ALU_GEU,
             'eq': self.ALU_EQ,
             'ne': self.ALU_NE
@@ -445,7 +445,7 @@ def parse_reg(st, error_index):
         case 'tp':
             return parse_reg('x4', error_index)
         case 't0' | 't1' | 't2' as T:
-            return parse_reg('x' + str(int(T[1]) + 6), error_index)
+            return parse_reg('x' + str(int(T[1]) + 5), error_index)
         case 's0' | 'fp':
             return parse_reg('x8', error_index)
         case 's1':
