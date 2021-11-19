@@ -111,6 +111,9 @@ miriscv_alu	ALU (
 	.flag_o			(flag)				// comparison flag
 );
 
+// assign wd = get_write_source(instr);
+assign wd = instr[28] ? alu : bit_extend(instr[7:0]);
+
 always @(posedge clk) begin
 	if (rst) begin
 		pc <= 4'b0;
@@ -122,8 +125,6 @@ always @(posedge clk) begin
 			pc <= pc + 31'b1;							// not jump
 	end
 end
-
-assign wd = get_write_source(instr);
 
 function [31:0] bit_extend(input [7:0] const);
 	if (instr[7] == 1'b1) begin		// negative constant

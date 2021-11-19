@@ -16,8 +16,8 @@
 // Parameters:
 //   rst   - reset signal
 //   clk   - clock signal
-//   pc    - program counter: number of current instruction to return
-//   instr - return value of 32 bit instruction with index equals `pc`
+//   pc    - 32 bit program counter: number of current instruction to return
+//   instr - 32 bit return value of 32 bit instruction with index equals `pc`
 // 
 // Dependencies: None
 // 

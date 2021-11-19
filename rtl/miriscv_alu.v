@@ -14,10 +14,10 @@
 //   Module takes two 32 bit numbers - do operation with them and returns 32 bit
 //   result of computatuin
 // Parameters:
-//   operator_i  - index of ALU operation to be done
-//   operand_a_i - first (left) operand of compution
-//   operand_b_i - second (right) operand of compution
-//   result_o    - result of compution
+//   operator_i  - 4 bit index of ALU operation to be done
+//   operand_a_i - 32 bit first (left) operand of compution
+//   operand_b_i - 32 bit second (right) operand of compution
+//   result_o    - 32 bit result of compution
 //   flag_o      - result flag of comparison
 // 
 // Dependencies: None
