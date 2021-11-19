@@ -1,81 +1,104 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+////////////////////////////////////////////////////////////////////////////////
+// Company: Miet
+// Engineer: Kostya
 // 
 // Create Date: 25.09.2021 09:33:53
-// Design Name: 
+// Design Name: RISC-V
 // Module Name: miriscv_alu
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
+// Project Name: RISC-V
+// Target Devices: any
+// Tool Versions: 2021.2
+// Description:
+//   async module
+//   Module takes two 32 bit numbers - do operation with them and returns 32 bit
+//   result of computatuin
+// Parameters:
+//   operator_i  - index of ALU operation to be done
+//   operand_a_i - first (left) operand of compution
+//   operand_b_i - second (right) operand of compution
+//   result_o    - result of compution
+//   flag_o      - result flag of comparison
 // 
-// Dependencies: 
+// Dependencies: None
 // 
 // Revision:
 // Revision 0.01 - File Created
 // Additional Comments:
 // 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
-`define ALU_OP_WIDTH 7
-`define ALU_ADD 6'b011000
-`define ALU_SUB 6'b011001
-`define ALU_XOR 6'b101111
-`define ALU_OR  6'b101110
-`define ALU_AND 6'b010101
-`define ALU_SRA 6'b100100
-`define ALU_SRL 6'b100101
-`define ALU_SLL 6'b100111
-`define ALU_LTS 6'b000000
-`define ALU_LTU 6'b000001
-`define ALU_GES 6'b001010
-`define ALU_GEU 6'b001011
-`define ALU_EQ  6'b001100
-`define ALU_NE  6'b001101
+`define ALU_OP_WIDTH 4
+`define ALU_ADD 4'b0000
+`define ALU_SUB 4'b0001
+`define ALU_XOR 4'b0010
+`define ALU_OR  4'b0011
+`define ALU_AND 4'b0100
+`define ALU_SRA 4'b0101
+`define ALU_SRL 4'b0110
+`define ALU_SLL 4'b0111
+`define ALU_LTS 4'b1000
+`define ALU_LTU 4'b1001
+`define ALU_GES 4'b1010
+`define ALU_GEU 4'b1011
+`define ALU_EQ  4'b1100
+`define ALU_NE  4'b1101
 
 module miriscv_alu (
 	input			[`ALU_OP_WIDTH-1:0]	operator_i,
-	input			[32:0]					operand_a_i,
-	input			[32:0]					operand_b_i,
-	output reg	[32:0]					result_o,
-	output reg								comparison_result_o
+	input			[31:0]					operand_a_i,
+	input			[31:0]					operand_b_i,
+	output 		[31:0]					result_o,
+	output 									flag_o
 );
 
-always @(*) begin
+assign result_o = alu_solve(operator_i, operand_a_i, operand_b_i);
+assign flag_o = alu_compare(operator_i, operand_a_i, operand_b_i);
+
+function [31:0] alu_solve(
+	input [`ALU_OP_WIDTH-1:0] operator_i,
+	input [31:0] operand_a_i,
+	input [31:0] operand_b_i
+);
 	case (operator_i)
-		`ALU_ADD: result_o <= operand_a_i  +  operand_b_i;
-		`ALU_SUB: result_o <= operand_a_i  -  operand_b_i;
-		`ALU_XOR: result_o <= operand_a_i  ^  operand_b_i;
-		`ALU_OR : result_o <= operand_a_i  |  operand_b_i;
-		`ALU_AND: result_o <= operand_a_i  &  operand_b_i;
-		`ALU_SRL: result_o <= operand_a_i >>  operand_b_i;
-		`ALU_SLL: result_o <= operand_a_i <<  operand_b_i;
-		`ALU_LTU: result_o <= operand_a_i  <  operand_b_i;
-		`ALU_GEU: result_o <= operand_a_i >=  operand_b_i;
-		`ALU_EQ : result_o <= operand_a_i ==  operand_b_i;
-		`ALU_NE : result_o <= operand_a_i !=  operand_b_i;
-		`ALU_SRA: result_o <= $signed(operand_a_i) >>> $signed(operand_b_i);
-		`ALU_LTS: result_o <= $signed(operand_a_i)  <  $signed(operand_b_i);
-		`ALU_GES: result_o <= $signed(operand_a_i) >=  $signed(operand_b_i);
+		`ALU_ADD: alu_solve = operand_a_i  +  operand_b_i;
+		`ALU_SUB: alu_solve = operand_a_i  -  operand_b_i;
+		`ALU_XOR: alu_solve = operand_a_i  ^  operand_b_i;
+		`ALU_OR : alu_solve = operand_a_i  |  operand_b_i;
+		`ALU_AND: alu_solve = operand_a_i  &  operand_b_i;
+		`ALU_SRL: alu_solve = operand_a_i >>  operand_b_i;
+		`ALU_SLL: alu_solve = operand_a_i <<  operand_b_i;
+		`ALU_LTU: alu_solve = operand_a_i  <  operand_b_i;
+		`ALU_GEU: alu_solve = operand_a_i >=  operand_b_i;
+		`ALU_EQ : alu_solve = operand_a_i ==  operand_b_i;
+		`ALU_NE : alu_solve = operand_a_i !=  operand_b_i;
+		`ALU_SRA: alu_solve = $signed(operand_a_i) >>> $signed(operand_b_i);
+		`ALU_LTS: alu_solve = $signed(operand_a_i)  <  $signed(operand_b_i);
+		`ALU_GES: alu_solve = $signed(operand_a_i) >=  $signed(operand_b_i);
 	endcase
+endfunction
+
+function [31:0] alu_compare(
+	input [`ALU_OP_WIDTH-1:0] operator_i,
+	input [31:0] operand_a_i,
+	input [31:0] operand_b_i
+);
 	case (operator_i)
-		`ALU_ADD: comparison_result_o <= 0;
-		`ALU_SUB: comparison_result_o <= 0;
-		`ALU_XOR: comparison_result_o <= 0;
-		`ALU_OR : comparison_result_o <= 0;
-		`ALU_AND: comparison_result_o <= 0;
-		`ALU_SRA: comparison_result_o <= 0;
-		`ALU_SRL: comparison_result_o <= 0;
-		`ALU_SLL: comparison_result_o <= 0;
-		`ALU_LTS: comparison_result_o <= result_o;
-		`ALU_LTU: comparison_result_o <= result_o;
-		`ALU_GES: comparison_result_o <= result_o;
-		`ALU_GEU: comparison_result_o <= result_o;
-		`ALU_EQ : comparison_result_o <= result_o;
-		`ALU_NE : comparison_result_o <= result_o;
+		`ALU_ADD: alu_compare = 0;
+		`ALU_SUB: alu_compare = 0;
+		`ALU_XOR: alu_compare = 0;
+		`ALU_OR : alu_compare = 0;
+		`ALU_AND: alu_compare = 0;
+		`ALU_SRA: alu_compare = 0;
+		`ALU_SRL: alu_compare = 0;
+		`ALU_SLL: alu_compare = 0;
+		`ALU_LTS: alu_compare = result_o;
+		`ALU_LTU: alu_compare = result_o;
+		`ALU_GES: alu_compare = result_o;
+		`ALU_GEU: alu_compare = result_o;
+		`ALU_EQ : alu_compare = result_o;
+		`ALU_NE : alu_compare = result_o;
 	endcase
-end
+endfunction
 
 endmodule

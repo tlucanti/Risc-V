@@ -4,7 +4,7 @@ module tb_reg_file ();
 
 	reg clk;
 	reg reset;
-	wire [8:0] sw;
+	wire [7:0] sw = 8'b00000011;
 
 	risk_5 test (
 		.rst(reset),
@@ -15,13 +15,13 @@ always #5 clk = ~clk;
 initial begin
 	clk = 0;
 	reset = 0;
-	@(posedge clk);
+	@(negedge clk);
 	reset = 1;
 	repeat(2) begin
-	  @(posedge clk);
+	  @(negedge clk);
 	end
 	reset = 0;
-	#100;
+	#200;
 	
 	$finish();
 end

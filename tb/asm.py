@@ -2,13 +2,13 @@
 # @Author: kostya
 # @Date:   2021-11-15 15:18:12
 # @Last Modified by:   kostya
-# @Last Modified time: 2021-11-17 15:28:08
+# @Last Modified time: 2021-11-18 15:34:35
 
 import sys
 import platform
 
 REGISTER_NUMBER = 32
-IMMIDIATE_LIMIT = 255
+IMMIDIATE_LIMIT = 127
 
 
 class Color(object):
@@ -29,6 +29,28 @@ class Color(object):
 
 color = Color()
 
+
+# ----------------------------- EXCEPTIONS CLASSES -----------------------------
+class RISCvSyntaxError(SyntaxError):
+    def __init__(self, what, error_index):
+        super().__init__(what)
+        self.name = 'Syntax error'
+        self.what = what
+        self.index = error_index
+
+
+class ImmidiateError(RISCvSyntaxError):
+    def __init__(self, what, error_index):
+        super().__init__(what, error_index)
+        self.name = 'Immidiate value error'
+
+
+class RegisterError(RISCvSyntaxError):
+    def __init__(self, what, error_index):
+        super().__init__(what, error_index)
+        self.name = 'Register name error'
+
+
 class Instruction(object):
     """
     A class used to code instruction using numeric values for registers,
@@ -46,26 +68,26 @@ class Instruction(object):
      │  │  │  │     │           └─ [RA1] 6 bit address in register file for the first operand of the alu
      │  │  │  │     └─ [ALUop] the operation code to perform on the alu
      │  │  │  │        alu operations:
-     │  │  │  │        ┌───────┬───────┬────────────────┐
-     │  │  │  │        │op-code│op-name│op-visualisation│
-     │  │  │  │        ├───────┼───────┼────────────────┤
-     │  │  │  │        │  0000 │ALU_LTS│ <              │
-     │  │  │  │        │  0001 │ALU_LTU│ <u             │
-     │  │  │  │        │  0010 │       │                │
-     │  │  │  │        │  0011 │       │                │
-     │  │  │  │        │  0100 │       │                │
-     │  │  │  │        │  0101 │       │                │
-     │  │  │  │        │  0110 │       │                │
-     │  │  │  │        │  0111 │       │                │
-     │  │  │  │        │  1000 │       │                │
-     │  │  │  │        │  1001 │       │                │
-     │  │  │  │        │  1010 │       │                │
-     │  │  │  │        │  1011 │       │                │
-     │  │  │  │        │  1100 │       │                │
-     │  │  │  │        │  1101 │       │                │
-     │  │  │  │        │  1110 │       │                │
-     │  │  │  │        │  1111 │       │                │
-     │  │  │  │        └───────┴───────┴────────────────┘
+     │  │  │  │       ┌───────┬───────┬────────────────┐
+     │  │  │  │       │op-code│op-name│op-visualisation│
+     │  │  │  │       ├───────┼───────┼────────────────┤
+     │  │  │  │       │  0000 │ALU_ADD│ x1 = x2  +  x3 │
+     │  │  │  │       │  0001 │ALU_SUB│ x1 = x2  -  x3 │
+     │  │  │  │       │  0010 │ALU_XOR│ x1 = x2  ^  x3 │
+     │  │  │  │       │  0011 │ALU_OR │ x1 = x2  |  x3 │
+     │  │  │  │       │  0100 │ALU_AND│ x1 = x2  &  x3 │
+     │  │  │  │       │  0101 │ALU_SRA│ x1 = x2 >>> x3 │ (SIGNED OPERATION)
+     │  │  │  │       │  0110 │ALU_SRL│ x1 = x2 >>  x3 │
+     │  │  │  │       │  0111 │ALU_SLL│ x1 = x2 <<  x3 │
+     │  │  │  │       │  1000 │ALU_LTS│ x1 = x2  <  x3 │ (SIGNED OPERATION)
+     │  │  │  │       │  1001 │ALU_LTU│ x1 = x2  <  x3 │
+     │  │  │  │       │  1010 │ALU_GES│ x1 = x2 >=  x  │ (SIGNED OPERATION)
+     │  │  │  │       │  1011 │ALU_GEU│ x1 = x2 >=  x  │
+     │  │  │  │       │  1100 │ALU_EQ │ x1 = x2 ==  x  │
+     │  │  │  │       │  1101 │ALU_NE │ x1 = x2 !=  x  │
+     │  │  │  │       │  1110 │ /--/  │  /----------/  │
+     │  │  │  │       │  1111 │ /--/  │  /----------/  │
+     │  │  │  │       └───────┴───────┴────────────────┘
      │  │  │  └─ [WS] data source for writing to a register file:
      │  │  │     ┌────┬─────────────────────────┐
      │  │  │     │ WS │ interpritation          │
@@ -124,7 +146,8 @@ class Instruction(object):
                + bin_extend(self.const, 8)
         hex_code = hex(int(bin_code, 2))[2:]
         hex_code = '0' * (8 - len(hex_code)) + hex_code
-        return hex_code
+        # return hex_code
+        return bin_code
 
 
 class _ALU(object):
@@ -174,6 +197,8 @@ class _RISCV(object):
 
     def parse(self, line):
         match line.split():
+            case 'nop', *ops:
+                instr = self.NoInstructionPseudo(ops)
             case 'li', *ops:
                 instr = self.LoadImmidiate(ops)
             case 'ls', *ops:
@@ -186,7 +211,9 @@ class _RISCV(object):
             case 'j', *ops:
                 instr = self.JumpPseudo(ops)
             case ops:
-                raise RISCvSyntaxError('{YELLOW}illegal instruction {CYAN}`' + ops[0] + '`{RESET}')
+                raise RISCvSyntaxError(
+                    '{YELLOW}illegal instruction {CYAN}`' + ops[0] \
+                    + '`{RESET}', (0, 0))
                 instr = None
 
         return instr
@@ -204,13 +231,14 @@ class _RISCV(object):
          >> li x3 0x123
         """
         if len(ops) != 2:
-            raise RISCvSyntaxError('{YELLOW}intruction {CYAN}`li`{YELLOW} ' \
-                                   'expecting two operands{WHITE}\n >> li {PURPLE}' \
-                                   '[register] [immidiate]{RESET}')
+            raise RISCvSyntaxError(
+                '{YELLOW}instruction {CYAN}`li`{YELLOW} expecting two operands'\
+                '{WHITE}\n >> li {PURPLE}[register] [immidiate]{RESET}',
+                (3, len(ops)))
         instruction = Instruction()
         reg, imm = ops
-        reg = parse_reg(reg)
-        imm = parse_imm(imm)
+        reg = parse_reg(reg, 1)
+        imm = parse_imm(imm, 2)
         instruction.WA = reg
         instruction.WS = 0
         instruction.const = imm
@@ -230,13 +258,13 @@ class _RISCV(object):
          >> ls t0
         """
         if len(ops) != 1:
-            raise RISCvSyntaxError('{YELLOW}instruction {CYAN}`ls`{YELLOW} ' \
-                                   'expecting one operand{WHITE}\n >> ls {PURPLE}' \
-                                   '[register]{RESET}')
+            raise RISCvSyntaxError(
+                '{YELLOW}instruction {CYAN}`ls`{YELLOW} expecting one operand' \
+                '{WHITE}\n >> ls {PURPLE}[register]{RESET}', (2, len(ops)))
             return None
         instruction = Instruction()
         reg, = ops
-        reg = parse_reg(reg)
+        reg = parse_reg(reg, 1)
         instruction.WA = reg
         instruction.WE = 1
         instruction.WS = 1
@@ -256,16 +284,17 @@ class _RISCV(object):
          >> beq s4 s7
         """
         if len(ops) != 3:
-            raise RISCvSyntaxError('{YELLOW}instruction {CYAN}`' + operation + \
-                                   '`{YELLOW} expecting three operands{WHITE}\n >> ' \
-                                   + operation + ' {PURPLE}[register1] ' \
-                                   '[register2] [immidiate]{RESET}')
+            raise RISCvSyntaxError(
+                '{YELLOW}instruction {CYAN}`' + operation + \
+                '`{YELLOW} expecting three operands{WHITE}\n >> ' + operation \
+                + ' {PURPLE}[register1] [register2] [immidiate]{RESET}',
+                (4, len(ops)))
             return None
         instruction = Instruction()
         reg1, reg2, imm = ops
-        reg1 = parse_reg(reg1)
-        reg2 = parse_reg(reg2)
-        imm = parse_imm(imm)
+        reg1 = parse_reg(reg1, 1)
+        reg2 = parse_reg(reg2, 2)
+        imm = parse_imm(imm, 3)
         instruction.C = 1
         instruction.ALUop = ALUop
         instruction.RA1 = reg1
@@ -287,16 +316,17 @@ class _RISCV(object):
          >> add x3 t3 t4 
         """
         if len(ops) != 3:
-            raise RISCvSyntaxError('{YELLOW}instruction {CYAN}`' + operation + \
-                                   '`{YELLOW} expecting three operands{WHITE}\n >> ' + \
-                                   operation + ' {PURPLE}[write_reg] ' \
-                                   '[read_reg_1] [read_reg_2]{RESET}')
+            raise RISCvSyntaxError(
+                '{YELLOW}instruction {CYAN}`' + operation + \
+               '`{YELLOW} expecting three operands{WHITE}\n >> ' + operation + \
+               ' {PURPLE}[write_reg] [read_reg_1] [read_reg_2]{RESET}',
+               (4, len(ops)))
             return None
         instruction = Instruction()
         wreg, reg1, reg2 = ops
-        wreg = parse_reg(wreg)
-        reg1 = parse_reg(reg1)
-        reg2 = parse_reg(reg2)
+        wreg = parse_reg(wreg, 1)
+        reg1 = parse_reg(reg1, 2)
+        reg2 = parse_reg(reg2, 3)
         instruction.WE = 1
         instruction.ALUop = ALUop
         instruction.RA1 = reg1
@@ -315,9 +345,10 @@ class _RISCV(object):
          >> jal [reg] [immidiate]
         """
         if len(ops) != 2:
-            raise RISCvSyntaxError('{YELLOW}instruction {CYAN}`jal`{YELLOW} expecting ' \
-                                   'two operands{WHITE}\n >> jal {PURPLE}[register] ' \
-                                   '[immidiate]{RESET}')
+            raise RISCvSyntaxError(
+                '{YELLOW}instruction {CYAN}`jal`{YELLOW} expecting two operands'\
+                '{WHITE}\n >> jal {PURPLE}[register] [immidiate]{RESET}',
+                (3, len(ops)))
             return None
         instruction = Instruction()
         reg, imm = ops
@@ -339,38 +370,39 @@ class _RISCV(object):
         """
 
         if len(ops) != 1:
-            raise RISCvSyntaxError('{YELLOW}instruction {CYAN}`j`{YELLOW} expecting one' \
-                                   ' operand{WHITE}\n >> j {PURPLE}[immidiate]{RESET}')
+            raise RISCvSyntaxError(
+                '{YELLOW}instruction {CYAN}`j`{YELLOW} expecting one' \
+                ' operand{WHITE}\n >> j {PURPLE}[immidiate]{RESET}',
+                (2, len(ops)))
             return None
         instruction = Instruction()
         imm, = ops
-        imm = parse_imm(imm)
+        imm = parse_imm(imm, 1)
         instruction.B = 1
         instruction.const = imm
         return instruction
 
+    @staticmethod
+    def NoInstructionPseudo(ops):
+        """
+        Empty pseudo instruction parser
+        crestes `add x0 x0 x0` instruction
+
+        Usage:
+         >> nop
+
+        Example:
+         >> nop
+        """
+
+        if len(ops) != 0:
+            raise RISCvSyntaxError(
+                '{YELLOW}instruction {CYAN}`nop`{YELLOW} not expecting ' \
+                'operands{WHITE}\n >> nop{RESET}', (1, len(ops)))
+        instruction = Instruction()
+        return RISCV.parse('add x0 x0 x0')
 
 RISCV = _RISCV()
-
-
-# ----------------------------- EXCEPTIONS CLASSES -----------------------------
-class RISCvSyntaxError(SyntaxError):
-    def __init__(self, what):
-        super().__init__(what)
-        self.name = 'Syntax error'
-        self.what = what
-
-
-class ImmidiateError(RISCvSyntaxError):
-    def __init__(self, what):
-        super().__init__(what)
-        self.name = 'Immidiate value error'
-
-
-class RegisterError(RISCvSyntaxError):
-    def __init__(self, what):
-        super().__init__(what)
-        self.name = 'Register name error'
 
 
 # ------------------------------- UTILS FUNCTIONS ------------------------------
@@ -389,30 +421,35 @@ def bin_extend(num, cnt):
 
 
 # ------------------------------- PARSE FUNCTIONS ------------------------------
-def parse_reg(st):
-    REGISTER_INDEX_MESSAGE = 'Invalid register index: {}'
-    REGISTER_LIMIT_MESSAGE = 'Invalid register index: {}, limit is {}'
-    REGISTER_FORMAT_MESSAGE = 'Invalid register format: {}'
+def parse_reg(st, error_index):
+    REGISTER_INDEX_MESSAGE = \
+        '{YELLOW}Invalid register index: {CYAN}`{__reg__}`{RESET}'
+    REGISTER_LIMIT_MESSAGE = \
+        '{YELLOW}Invalid register index: {CYAN}`{__reg__}`{YELLOW}, ' \
+        'limit is {PURPLE}{__limit__}{RESET}'
+    REGISTER_FORMAT_MESSAGE = \
+        '{YELLOW}Invalid register format: {CYAN}`{__reg__}`{RESET}'
 
     if not contains_only(st.lower(), '0123456789rasgfptxzeo'):
-        raise RegisterError(REGISTER_FORMAT_MESSAGE.format(st))
+        raise RegisterError(REGISTER_FORMAT_MESSAGE.replace('{__reg__}', st),
+            (error_index, error_index))
     match st.lower():
         case 'zero':
-            return parse_reg('x0')
+            return parse_reg('x0', error_index)
         case 'ra':
-            return parse_reg('x1')
+            return parse_reg('x1', error_index)
         case 'sp':
-            return parse_reg('x2')
+            return parse_reg('x2', error_index)
         case 'gp':
-            return parse_reg('x3')
+            return parse_reg('x3', error_index)
         case 'tp':
-            return parse_reg('x4')
+            return parse_reg('x4', error_index)
         case 't0' | 't1' | 't2' as T:
-            return parse_reg('x' + str(int(T[1]) + 6))
+            return parse_reg('x' + str(int(T[1]) + 6), error_index)
         case 's0' | 'fp':
-            return parse_reg('x8')
+            return parse_reg('x8', error_index)
         case 's1':
-            return parse_reg('x9')
+            return parse_reg('x9', error_index)
         case _:
             pass
 
@@ -420,32 +457,46 @@ def parse_reg(st):
         try:
             reg_cnt = int(st[1:])
         except ValueError:
-            raise RegisterError(REGISTER_INDEX_MESSAGE.format(st[1:]))
+            raise RegisterError(REGISTER_INDEX_MESSAGE.replace( \
+                '{__reg__}', st[1:]), (error_index, error_index))
         match st[0]:
             case 'a':
                 if reg_cnt > 7:
-                    raise RegisterError(REGISTER_LIMIT_MESSAGE.format(st[1:], 7))
-                return parse_reg('x' + str(reg_cnt + 10))
+                    raise RegisterError(REGISTER_LIMIT_MESSAGE.replace( \
+                        '{__reg__}', st[1:]).replace('{__limit__}', '7'),
+                        (error_index, error_index))
+                return parse_reg('x' + str(reg_cnt + 10), error_index)
             case 't':
                 if reg_cnt > 6:
-                    raise RegisterError(REGISTER_LIMIT_MESSAGE.format(st[1:], 6))
-                return parse_reg('x' + str(reg_cnt + 25))
+                    raise RegisterError(REGISTER_LIMIT_MESSAGE.replace( \
+                        '{__reg__}', st[1:]).replace('{__limit__}', '6'),
+                        (error_index, error_index))
+                return parse_reg('x' + str(reg_cnt + 25), error_index)
             case 's':
                 if reg_cnt > 11:
-                    raise RegisterError(REGISTER_LIMIT_MESSAGE.format(st[1:], 11))
-                return parse_reg('x' + str(reg_cnt + 16))
+                    raise RegisterError(REGISTER_LIMIT_MESSAGE.replace( \
+                        '{__reg__}', st[1:]).replace('{__limit__}', '11'),
+                        (error_index, error_index))
+                return parse_reg('x' + str(reg_cnt + 16), error_index)
             case 'x':
                 if reg_cnt > 31:
-                    raise RegisterError(REGISTER_LIMIT_MESSAGE.format(st[1:], REGISTER_NUMBER))
+                    raise RegisterError(REGISTER_LIMIT_MESSAGE.replace( \
+                        '{__reg__}', st[1:]).replace('{__limit__}', \
+                        str(REGISTER_NUMBER - 1)), (error_index, error_index))
                 return reg_cnt
     else:
-        raise RegisterError(REGISTER_FORMAT_MESSAGE.format(st))
+        raise RegisterError(REGISTER_FORMAT_MESSAGE.replace('{__reg__}', st),
+            (error_index, error_index))
 
 
-def parse_imm(st):
-    IMMIDIATE_ERROR_MESSAGE = 'Invalid Immidiate value with base {}: {}'
-    IMMIDIATE_LIMIT_MESSAGE = 'Immidiate value to big: {}, limit is ' + str(IMMIDIATE_LIMIT)
-    IMMIDIATE_ERROR_BASE = 'Invalid Immidiate value: {}'
+def parse_imm(st, error_index):
+    IMMIDIATE_ERROR_MESSAGE = '{YELLOW}Invalid Immidiate value with base ' \
+        '{PURPLE}{__base__}: {CYAN}`{__value__}`{RESET}'
+    IMMIDIATE_LIMIT_MESSAGE = '{YELLOW}Immidiate value to big: ' \
+        '{CYAN}`{__value__}`{YELLOW}, limit is {PURPLE}' \
+        + f'[{-IMMIDIATE_LIMIT - 1} : {IMMIDIATE_LIMIT}]' + '{RESET}'
+    IMMIDIATE_ERROR_BASE = '{YELLOW}Invalid Immidiate value: ' \
+        '{CYAN}`{__value__}`{RESET}'
 
     sign = 1
     if st[0] == '-':
@@ -458,41 +509,78 @@ def parse_imm(st):
             i = st[2:]
             base = 16
             if not contains_only(i, '0123456789abcdefABCDEF'):
-                raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.format(16, i))
+                raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.replace( \
+                    '{__base__}', '16').replace('{__value__}', i),
+                    (error_index, error_index))
         case '0o' | '0O':
             i = st[2:]
             base = 8
             if not contains_only(i, '01234567'):
-                raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.format(8, i))
+                raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.replace( \
+                   '{__base__}', '8').replace('{__value__}', i),
+                    (error_index, error_index))
         case '0b' | '0B':
             i = st[2:]
             base = 2
             if not contains_only(i, '01'):
-                raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.format(2, i))
+                raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.replace( \
+                   '{__base__}', '2').replace('{__value__}', i),
+                    (error_index, error_index))
         case _:
             i = st
             base = 10
     try:
         ans = int(i, base=base) * sign
-        if -IMMIDIATE_LIMIT - 1 > ans > IMMIDIATE_LIMIT:
-            raise ImmidiateError(IMMIDIATE_LIMIT_MESSAGE)
+        if not -IMMIDIATE_LIMIT - 1 <= ans <= IMMIDIATE_LIMIT:
+            raise ImmidiateError(IMMIDIATE_LIMIT_MESSAGE.replace( \
+                '{__value__}', i), (error_index, error_index))
         return ans
     except ValueError:
-        raise ImmidiateError(IMMIDIATE_ERROR_BASE.format(i))
+        raise ImmidiateError(IMMIDIATE_ERROR_BASE.replace('{__value__}', i),
+            (error_index, error_index))
+
+
+def create_arrow(line, index):
+    def _find_non_space(st, start):
+        for _i in range(start, len(st)):
+            if st[_i] != ' ':
+                return _i
+
+    split = line.split()
+    size = list(map(len, split))
+    word_start = []
+    word_end = []
+    word_index = 0
+    for i in range(len(split)):
+        word_start.append(_find_non_space(line, word_index))
+        word_end.append(word_start[-1] + size[i])
+        word_index = word_end[-1]
+    if index[0] > len(split):
+        arrow = ' ' * len(line) + ' '
+    else:
+        arrow = ' ' * word_start[index[0]]
+    if index[0] > index[1]:
+        arrow += '{GREEN}^~~{RESET}'
+    else:
+        arrow += '{GREEN}^' + '~' \
+            * (word_end[index[1]] - word_start[index[0]] - 1) + '{RESET}'
+    arrow += '\n'
+    return arrow.format(RESET=color.RESET, GREEN=color.GREEN)
 
 
 def compile(prog, fname):
-    SYNTAX_ERROR_MESSAGE = "{WHITE}{fname}:{line_num}{RED} error: " \
-                           "{WHITE}{exc_name}{RESET}\n" \
-                           "{exc_message}{RESET}\n" \
-                           "{WHITE}{line_num:>5} |  {RESET}{line}\n" \
-                           "{WHITE}      |{RESET}"
-    ERROR_LIMIT_MESSAGE = "{fname}:{line_num}: note: compilation terminated due " \
-                          + "to error limit = 20"
+    SYNTAX_ERROR_MESSAGE = \
+        "{WHITE}{fname}:{line_num}{RED} error: {WHITE}{exc_name}{RESET}\n" \
+        "{exc_message}{RESET}\n{WHITE}{line_num:>5} |  {RESET}{line}\n" \
+        "{WHITE}      |  {error_arrow}{RESET}"
+    ERROR_LIMIT_MESSAGE = \
+        "{WHITE}{fname}:{line_num} {CYAN}note: {WHITE}compilation terminated " \
+        "due to error limit = 20{RESET}"
 
     error_cnt = 0
     ans = []
     for ind, line in enumerate(prog.split('\n')):
+        line = line.expandtabs(4)
         if '#' in line:
             line = line[:line.index('#')]
         if len(line) == 0:
@@ -513,6 +601,8 @@ def compile(prog, fname):
                                               WHITE=color.WHITE,
                                               RESET=color.RESET)
                 print(SYNTAX_ERROR_MESSAGE.format(fname=fname, line_num=ind,
+                                                  error_arrow=create_arrow( \
+                                                    line, exc.index),
                                                   exc_name=exc.name,
                                                   exc_message=exc_message,
                                                   line=line,
@@ -538,10 +628,11 @@ def compile(prog, fname):
 def main():
     argv = sys.argv[1:]
     if len(argv) < 1:
-        print("{WHITE}usage: python asm.py {PURPLE}[program.s] {YELLOW}...{RESET}".format(
-            WHITE=color.WHITE, PURPLE=color.PURPLE, YELLOW=color.YELLOW, RESET=color.RESET))
-        print("  where {PURPLE}[program.s]{RESET} is file with RISC-V assembly code".format(
-            PURPLE=color.PURPLE, RESET=color.RESET))
+        print("{WHITE}usage: python asm.py {PURPLE}[program.s] {YELLOW}..." \
+            "{RESET}".format(WHITE=color.WHITE, PURPLE=color.PURPLE, \
+                YELLOW=color.YELLOW, RESET=color.RESET))
+        print("  where {PURPLE}[program.s]{RESET} is file with RISC-V " \
+            "assembly code".format(PURPLE=color.PURPLE, RESET=color.RESET))
     for file_name in argv:
         try:
             if not file_name.endswith('.s'):
@@ -560,7 +651,8 @@ def main():
                 continue
             with open(file_name[:-2] + '.bin', 'w') as file:
                 file.write('\n'.join(obj))
-            print("{WHITE}{fname}: compilation {GREEN}succsessfull{RESET}".format(
+            print( \
+                "{WHITE}{fname}: compilation {GREEN}succsessfull{RESET}".format(
                 fname=file_name, GREEN=color.GREEN, RESET=color.RESET,
                 WHITE=color.WHITE))
         except FileNotFoundError:
