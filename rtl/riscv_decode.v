@@ -20,8 +20,13 @@
 //   alu_op_o           - 5 bit ALU op-code
 //   mem_req_o          - memory request
 //   mem_we_o           - memory write enable (reading if zero)
-//   mem_size_o         - memory return size (word, half, byte)
-//   gpr_we_a_o         - registry file read enable
+//   mem_size_o         - 2 - bit memory return size
+//                          000 - signed byte (8 bit)
+//                          001 - signed half (16 bit)
+//                          010 - word (32 bit)
+//                          100 - unsigned byte (8 bit)
+//                          101 - unsigned half (16 bit)
+//   gpr_we_a_o         - registry file write enable
 //   wb_src_sel_o       - registry file write source driving signal
 //   illegal_instr_o    - illegal instruction signal
 //   branch_o           - branch operation signal
@@ -41,91 +46,521 @@
 module miriscv_decode
 (
    input    [31:0]               fetched_instr_i,
-   output   [1:0]                ex_op_a_sel_o,
-   output   [2:0]                ex_op_b_sel_o,
-   output   [`ALU_OP_WIDTH-1:0]  alu_op_o,
-   output                        mem_req_o,
-   output                        mem_we_o,
-   output   [2:0]                mem_size_o,
-   output                        gpr_we_a_o,
-   output                        wb_src_sel_o,
-   output                        illegal_instr_o,
-   output                        branch_o,
-   output                        jal_o,
-   output                        jalr_o
+   output reg   [1:0]                ex_op_a_sel_o,
+   output reg   [2:0]                ex_op_b_sel_o,
+   output reg   [`ALU_OP_WIDTH-1:0]  alu_op_o,
+   output reg                        mem_req_o,
+   output reg                        mem_we_o,
+   output reg   [2:0]                mem_size_o,
+   output reg                        gpr_we_a_o,
+   output reg                        wb_src_sel_o,
+   output reg                        illegal_instr_o,
+   output reg                        branch_o,
+   output reg                        jal_o,
+   output reg                        jalr_o
 );
 
 wire     [4:0] op_code;
 wire     [2:0] funct3;
 wire     [6:0] funct7;
-wire     is_load;
-wire     is_store;
-wire     is_branch;
-wire     is_system;
 
 assign op_code       = fetched_instr_i[6:2];
 assign funct3        = fetched_instr_i[14:12];
 assign funct7        = fetched_instr_i[31:25];
-assign is_load       = op_code == `LOAD_OPCODE;
-assign is_store      = op_code == `STORE_OPCODE;
-assign is_branch     = op_code != `BRANCH_OPCODE;
-assign is_system     = op_code != `SYSTEM_OPCODE;
-assign is_legal      = op_code == `LOAD_OPCODE || op_code == `MISC_MEM_OPCODE
-                  || op_code == `OP_IMM_OPCODE || op_code == `AUIPC_OPCODE
-                  || op_code == `STORE_OPCODE  || op_code == `OP_OPCODE
-                  || op_code == `LUI_OPCODE    || op_code == `BRANCH_OPCODE
-                  || op_code == `JALR_OPCODE   || op_code == `JAL_OPCODE
-                  || op_code == `SYSTEM_OPCODE;
 
-assign ex_op_a_sel_o   = set_ex_op_a_sel_o(op_code);
-assign ex_op_b_sel_o   = set_ex_op_b_sel_o (op_code);
-assign alu_op_o        = set_alu_op_o(funct3, funct7);
-assign mem_req_o       = is_load || is_store;
-assign mem_we_o        = is_store;
-assign mem_size_o      = funct3;
-assign gpr_we_a_o      = !is_store && !is_branch && !is_system;
-assign wb_src_sel_o    = is_load;
-assign branch_o        = is_branch;
-assign jal_o           = op_code == `JAL_OPCODE;
-assign jalr_o          = op_code == `JALR_OPCODE;
-assign illegal_instr_o = !is_legal;
-
-function set_ex_op_a_sel_o(input [4:0] op_code);
+always @(*) begin
    case (op_code)
-      `LUI_OPCODE:   set_ex_op_a_sel_o = 2;
-      `JAL_OPCODE,
-      `JALR_OPCODE,
-      `AUIPC_OPCODE: set_ex_op_a_sel_o = 1;
-      default:       set_ex_op_a_sel_o = 0;
+      `OP_OPCODE:                                                               // ADD SUB SLL SLT SLTU XOR SRL SRA OR
+         begin                                                                  // AND
+            if (illegal_instr_o) begin
+               ex_op_a_sel_o  = 0;
+               ex_op_b_sel_o  = 0;
+               mem_req_o      = 0;
+               mem_we_o       = 0;
+               mem_size_o     = 0;
+               gpr_we_a_o     = 0;
+               wb_src_sel_o   = 0;
+               branch_o       = 0;
+               jal_o          = 0;
+               jalr_o         = 0;
+            end else begin
+               ex_op_a_sel_o  = 2'd0;
+               ex_op_b_sel_o  = 3'd0;
+               mem_req_o      = 1'd0;
+               mem_we_o       = 0;
+               mem_size_o     = 0;
+               gpr_we_a_o     = 1'd1;
+               wb_src_sel_o   = 1'd1;
+               branch_o       = 1'd0;
+               jal_o          = 1'd0;
+               jalr_o         = 1'd0;
+            end
+            case (funct3)
+               3'b000:                                                          // ADD SUB
+                  begin
+                     if (funct7 == 7'b0000000) begin                            // ADD
+                        alu_op_o          = `ALU_ADD;
+                        illegal_instr_o   = 1'b0;
+                     end else if (funct7 == 7'b0000001) begin                   // SUB
+                        alu_op_o          = `ALU_SUB;
+                        illegal_instr_o   = 1'b0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'b1;
+                     end
+                  end
+               3'b001:
+                  begin
+                     if (funct7 == 7'b0000000) begin                            // SLL
+                        alu_op_o          = `ALU_SLL;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'b1;
+                     end
+                  end
+               3'b010:
+                  begin
+                     if (funct7 == 7'b0000000) begin                            // SLT
+                        alu_op_o          = `ALU_SLTS;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'b1;
+                     end
+                  end
+               3'b011:
+                   begin
+                     if (funct7 == 7'b0000000) begin                            // SLTU
+                        alu_op_o          = `ALU_SLTU;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'b1;
+                     end
+                  end
+               3'b100:
+                   begin
+                     if (funct7 == 7'b0000000) begin                            // XOR
+                        alu_op_o          = `ALU_XOR;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'b1;
+                     end
+                  end
+               3'b101:
+                   begin
+                     if (funct7 == 7'b0000000) begin                            // SRL
+                        alu_op_o          = `ALU_SRL;
+                        illegal_instr_o   = 0;
+                     end else if (funct7 == 7'b0000001) begin                   // SRA
+                        alu_op_o          = `ALU_SRA;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'b1;
+                     end
+                  end
+               3'b110:
+                   begin
+                     if (funct7 == 7'b0000000) begin                            // OR
+                        alu_op_o          = `ALU_OR;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'b1;
+                     end
+                  end
+               3'b111:
+                   begin
+                     if (funct7 == 7'b0000000) begin                            // AND
+                        alu_op_o          = `ALU_AND;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'b1;
+                     end
+                  end
+               default
+                  begin
+                     alu_op_o             = 0;
+                     illegal_instr_o      = 1'b1;
+                  end
+            endcase
+         end
+      `OP_IMM_OPCODE:                                                           // ADDI SLTI SLTIU XORI ORI ANDI SLLI
+         begin                                                                  // SRLI SRAI
+            if (illegal_instr_o) begin
+               ex_op_a_sel_o  = 0;
+               ex_op_b_sel_o  = 0;
+               mem_req_o      = 0;
+               mem_we_o       = 0;
+               mem_size_o     = 0;
+               gpr_we_a_o     = 0;
+               wb_src_sel_o   = 0;
+               branch_o       = 0;
+               jal_o          = 0;
+               jalr_o         = 0;
+            end else begin
+               ex_op_a_sel_o  = 2'd1;
+               ex_op_b_sel_o  = 3'd1;
+               mem_req_o      = 1'd0;
+               mem_we_o       = 0;
+               mem_size_o     = 0;
+               gpr_we_a_o     = 1'd1;
+               wb_src_sel_o   = 1'd1;
+               branch_o       = 1'd0;
+               jal_o          = 1'd0;
+               jalr_o         = 1'd0;
+            end
+            case (funct3)
+               3'b000:                                                          // ADDI
+                  begin
+                     alu_op_o             = `ALU_ADD;
+                     illegal_instr_o      = 0;
+                  end
+               3'b010:                                                          // SLTI
+                  begin
+                     alu_op_o             = `ALU_SLTS;
+                     illegal_instr_o      = 0;
+                  end
+               3'b011:                                                          // SLTIU
+                  begin
+                     alu_op_o             = `ALU_SLTU;
+                     illegal_instr_o      = 0;
+                  end
+               3'b100:                                                          // XORI
+                  begin
+                     alu_op_o             = `ALU_XOR;
+                     illegal_instr_o      = 0;
+                  end
+               3'b110:                                                          // ORI
+                  begin
+                     alu_op_o             = `ALU_OR;
+                     illegal_instr_o      = 0;
+                  end
+               3'b111:                                                          // ANDI
+                  begin
+                     alu_op_o             = `ALU_AND;
+                     illegal_instr_o      = 0;
+                  end
+               3'b001:
+                  begin
+                     if (funct7 == 7'b0000000) begin                            // SLLI
+                        alu_op_o          = `ALU_SLL;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'd1;
+                     end
+                  end
+               3'b101:
+                  begin
+                     if (funct7 == 7'b0000000) begin                            // SRLI
+                        alu_op_o          = `ALU_SRL;
+                        illegal_instr_o   = 0;
+                     end else if (funct7 == 7'b0100000) begin                   // SRAI
+                        alu_op_o          = `ALU_SRA;
+                        illegal_instr_o   = 0;
+                     end else begin                                             // ILL
+                        alu_op_o          = 0;
+                        illegal_instr_o   = 1'd1;
+                     end
+                  end
+               default:
+                  begin
+                     alu_op_o             = 0;
+                     illegal_instr_o      = 1'd1;
+                  end
+            endcase
+         end
+      `LUI_OPCODE:                                                              // LUI
+         begin
+            ex_op_a_sel_o     = 2'd1;
+            ex_op_b_sel_o     = 3'd2;
+            alu_op_o          = 0;
+            mem_req_o         = 1'd0;
+            mem_we_o          = 0;
+            mem_size_o        = 0;
+            gpr_we_a_o        = 1'd1;
+            wb_src_sel_o      = 1'd1;
+            illegal_instr_o   = 1'd0;
+            branch_o          = 1'd0;
+            jal_o             = 1'd0;
+            jalr_o            = 1'd0;
+         end
+      `LOAD_OPCODE:                                                             // LB LH LW LBU LHU
+         begin
+            if (illegal_instr_o) begin
+               ex_op_a_sel_o  = 0;
+               ex_op_b_sel_o  = 0;
+               alu_op_o       = 0;
+               mem_we_o       = 0;
+               gpr_we_a_o     = 0;
+               wb_src_sel_o   = 0;
+               branch_o       = 0;
+               jal_o          = 0;
+               jalr_o         = 0;
+            end else begin
+               ex_op_a_sel_o  = 2'd0;
+               ex_op_b_sel_o  = 3'd1;
+               alu_op_o       = `ALU_ADD;
+               mem_we_o       = 0;
+               gpr_we_a_o     = 1'd1;
+               wb_src_sel_o   = 1'd1;
+               branch_o       = 1'd0;
+               jal_o          = 1'd0;
+               jalr_o         = 1'd0;
+            end
+            case (funct3)
+               3'b000,                                                          // LB
+               3'b001,                                                          // LH
+               3'b010,                                                          // LW
+               3'b100,                                                          // LBU
+               3'b101:                                                          // LHU
+                  begin
+                     mem_req_o         = 1'd1;
+                     mem_size_o        = funct3;
+                     illegal_instr_o   = 0;
+                  end
+               default:                                                         // ILL
+                  begin
+                     mem_req_o         = 0;
+                     mem_size_o        = 0;
+                     illegal_instr_o   = 1'd1;
+                  end
+            endcase
+         end
+      `STORE_OPCODE:                                                            // SB SH SW
+         begin
+            if (illegal_instr_o) begin
+               ex_op_a_sel_o  = 0;
+               ex_op_b_sel_o  = 0;
+               alu_op_o       = 0;
+               mem_we_o       = 0;
+               gpr_we_a_o     = 0;
+               wb_src_sel_o   = 0;
+               branch_o       = 0;
+               jal_o          = 0;
+               jalr_o         = 0;
+            end else begin
+               ex_op_a_sel_o  = 2'd0;
+               ex_op_b_sel_o  = 3'd3;
+               alu_op_o       = `ALU_ADD;
+               mem_we_o       = 1'b1;
+               gpr_we_a_o     = 1'd0;
+               wb_src_sel_o   = 1'd1;
+               branch_o       = 1'd0;
+               jal_o          = 1'd0;
+               jalr_o         = 1'd0;
+            end
+            case (funct3)
+               3'b000,                                                          // SB
+               3'b001,                                                          // SH
+               3'b010:                                                          // SW
+                  begin
+                     mem_req_o         = 1'd1;
+                     mem_size_o        = funct3;
+                     illegal_instr_o   = 0;
+                  end
+               default:                                                         // ILL
+                  begin
+                     mem_req_o         = 0;
+                     mem_size_o        = 0;
+                     illegal_instr_o   = 1'd1;
+                  end
+            endcase
+         end
+      `BRANCH_OPCODE:                                                           // BEQ BNE BLT BGE BLTU BGEU
+         begin
+            if (illegal_instr_o) begin
+               ex_op_a_sel_o     = 0;
+               ex_op_b_sel_o     = 0;
+               mem_req_o         = 0;
+               mem_we_o          = 0;
+               mem_size_o        = 0;
+               gpr_we_a_o        = 0;
+               wb_src_sel_o      = 0;
+               branch_o          = 0;
+               jal_o             = 0;
+               jalr_o            = 0;
+            end else begin
+               ex_op_a_sel_o     = 2'd0;
+               ex_op_b_sel_o     = 3'd0;
+               mem_req_o         = 1'd0;
+               mem_we_o          = 0;
+               mem_size_o        = 0;
+               gpr_we_a_o        = 1'd0;
+               wb_src_sel_o      = 0;
+               branch_o          = 1'd1;
+               jal_o             = 1'd0;
+               jalr_o            = 1'd0;
+            end
+            case (funct3)
+               3'b000:                                                          // BEQ
+                  begin
+                     alu_op_o          = `ALU_EQ;
+                     illegal_instr_o   = 0;
+                  end
+               3'b001:                                                          // BNE
+                  begin
+                     alu_op_o          = `ALU_NE;
+                     illegal_instr_o   = 0;
+                  end
+               3'b100:                                                          // BLT
+                  begin
+                     alu_op_o          = `ALU_LTS;
+                     illegal_instr_o   = 0;
+                  end
+               3'b101:                                                          // BGE
+                  begin
+                     alu_op_o          = `ALU_GES;
+                     illegal_instr_o   = 0;
+                  end
+               3'b110:                                                          // BLTU
+                  begin
+                     alu_op_o          = `ALU_LTU;
+                     illegal_instr_o   = 0;
+                  end
+               3'b111:                                                          // BGEU
+                  begin
+                     alu_op_o          = `ALU_GEU;
+                     illegal_instr_o   = 0;
+                  end
+               default:                                                         // ILL
+                  begin
+                     alu_op_o          = 0;
+                     illegal_instr_o   = 1'd1;
+                  end
+            endcase
+         end
+      `JAL_OPCODE:                                                              // JAL
+         begin
+            ex_op_a_sel_o        = 1'd1;
+            ex_op_b_sel_o        = 3'd4;
+            alu_op_o             = `ALU_ADD;
+            mem_req_o            = 1'd0;
+            mem_we_o             = 0;
+            mem_size_o           = 0;
+            gpr_we_a_o           = 1'd1;
+            wb_src_sel_o         = 1'd0;
+            illegal_instr_o      = 0;
+            branch_o             = 1'd0;
+            jal_o                = 1'd1;
+            jalr_o               = 1'd0;
+         end
+      `JALR_OPCODE:                                                             // JALR
+         begin
+            if (funct3 == 3'b000) begin
+               ex_op_a_sel_o     = 1'd1;
+               ex_op_b_sel_o     = 3'd4;
+               alu_op_o          = `ALU_ADD;
+               mem_req_o         = 1'd0;
+               mem_we_o          = 0;
+               mem_size_o        = 0;
+               gpr_we_a_o        = 1'd1;
+               wb_src_sel_o      = 1'd0;
+               illegal_instr_o   = 0;
+               branch_o          = 1'd0;
+               jal_o             = 1'd0;
+               jalr_o            = 1'd1;
+            end else begin                                                      // ILL
+               ex_op_a_sel_o     = 0;
+               ex_op_b_sel_o     = 0;
+               alu_op_o          = 0;
+               mem_req_o         = 0;
+               mem_we_o          = 0;
+               mem_size_o        = 0;
+               gpr_we_a_o        = 0;
+               wb_src_sel_o      = 0;
+               illegal_instr_o   = 1'd1;
+               branch_o          = 0;
+               jal_o             = 0;
+               jalr_o            = 0;
+            end
+         end
+      `AUIPC_OPCODE:                                                            // AUIPC
+         begin
+            ex_op_a_sel_o        = 2'd1;
+            ex_op_b_sel_o        = 3'd2;
+            alu_op_o             = `ALU_ADD;
+            mem_req_o            = 1'd0;
+            mem_we_o             = 0;
+            mem_size_o           = 0;
+            gpr_we_a_o           = 1'd1;
+            wb_src_sel_o         = 1'd0;
+            illegal_instr_o      = 0;
+            branch_o             = 1'd0;
+            jal_o                = 1'd0;
+            jalr_o               = 1'd0;
+         end
+      `FENCE_OPCODE:                                                            // FENCE (NOP)
+         begin
+            if (funct3 == 3'b000) begin
+               ex_op_a_sel_o        = 0;
+               ex_op_b_sel_o        = 0;
+               alu_op_o             = 0;
+               mem_req_o            = 0;
+               mem_we_o             = 0;
+               mem_size_o           = 0;
+               gpr_we_a_o           = 0;
+               wb_src_sel_o         = 0;
+               illegal_instr_o      = 0;
+               branch_o             = 0;
+               jal_o                = 0;
+               jalr_o               = 0;
+            end else begin                                                      // ILL
+               ex_op_a_sel_o        = 0;
+               ex_op_b_sel_o        = 0;
+               alu_op_o             = 0;
+               mem_req_o            = 0;
+               mem_we_o             = 0;
+               mem_size_o           = 0;
+               gpr_we_a_o           = 0;
+               wb_src_sel_o         = 0;
+               illegal_instr_o      = 1'd1;
+               branch_o             = 0;
+               jal_o                = 0;
+               jalr_o               = 0;
+            end
+         end
+      `SYSTEM_OPCODE:                                                           // ECALL (NOP) EBREAK (NOP)
+         begin
+            casez (fetched_instr_i[31:7])
+               'b00000000000?_00000_000_00000:
+                  begin
+                     ex_op_a_sel_o     = 0;
+                     ex_op_b_sel_o     = 0;
+                     alu_op_o          = 0;
+                     mem_req_o         = 0;
+                     mem_we_o          = 0;
+                     mem_size_o        = 0;
+                     gpr_we_a_o        = 0;
+                     wb_src_sel_o      = 0;
+                     illegal_instr_o   = 0;
+                     branch_o          = 0;
+                     jal_o             = 0;
+                     jalr_o            = 0;
+                  end
+               default:                                                         // ILL
+                  begin
+                     ex_op_a_sel_o     = 0;
+                     ex_op_b_sel_o     = 0;
+                     alu_op_o          = 0;
+                     mem_req_o         = 0;
+                     mem_we_o          = 0;
+                     mem_size_o        = 0;
+                     gpr_we_a_o        = 0;
+                     wb_src_sel_o      = 0;
+                     illegal_instr_o   = 1'b1;
+                     branch_o          = 0;
+                     jal_o             = 0;
+                     jalr_o            = 0;
+                  end
+            endcase
+         end
    endcase
-endfunction
-
-function set_ex_op_b_sel_o(input [4:0] op_code);
-   case (op_code)
-      `JAL_OPCODE,
-      `JALR_OPCODE:  set_ex_op_b_sel_o = 4;
-      `STORE_OPCODE: set_ex_op_b_sel_o = 3;
-      `LUI_OPCODE,
-      `AUIPC_OPCODE: set_ex_op_b_sel_o = 2;
-      `LOAD_OPCODE,
-      `OP_IMM_OPCODE:set_ex_op_b_sel_o = 1;
-      default:       set_ex_op_b_sel_o = 0;
-   endcase
-endfunction
-
-function set_alu_op_o(
-   input [2:0] funct3,
-   input [6:0] funct7
-);
-   case (funct3)
-      'h0: set_alu_op_o = funct7 ? `ALU_SUB : `ALU_ADD;
-      'h4: set_alu_op_o = `ALU_XOR;
-      'h6: set_alu_op_o = `ALU_OR;
-      'h7: set_alu_op_o = `ALU_AND;
-      'h5: set_alu_op_o = funct7 ? `ALU_SRA : `ALU_SRL;
-      'h2: set_alu_op_o = `ALU_LTS;
-      'h3: set_alu_op_o = `ALU_LTU;
-   endcase
-endfunction
+end
 
 endmodule

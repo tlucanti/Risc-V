@@ -4,322 +4,322 @@
 
 module tb_miriscv_decode_obf();
 
-  parameter sleep = 4;
-  parameter for_border = 100; // per one opcode
+  parameter evNMTIYam = 4;
+  parameter na2NeG76MVkvp = 100; // per one opcode
 
-  reg   [31:0]               fetched_instr_i;
-  wire  [1:0]                ex_op_a_sel_o;
-  wire  [2:0]                ex_op_b_sel_o;
-  wire  [`ALU_OP_WIDTH-1:0]  alu_op_o;
-  wire                       mem_req_o;
-  wire                       mem_we_o;
-  wire  [2:0]                mem_size_o;
-  wire                       gpr_we_a_o;
-  wire                       wb_src_sel_o;
-  wire                       illegal_instr_o;
-  wire                       branch_o;
-  wire                       jal_o;
-  wire                       jalr_o;
-  reg  [1:0]                 ex_op_a_sel;
-  reg  [2:0]                 ex_op_b_sel;
-  reg  [`ALU_OP_WIDTH-1:0]   alu_op;
-  reg                        mem_req;
-  reg                        mem_we;
-  reg  [2:0]                 mem_size;
-  reg                        gpr_we_a;
-  reg                        wb_src_sel;
-  reg                        illegal_instr;
-  reg                        branch;
-  reg                        jal;
-  reg                        jalr;
+  reg   [31:0]               UmWx5ulXQ5IP;
+  wire  [1:0]                I2r97V7muunE;
+  wire  [2:0]                R5si3NNGkJJI;
+  wire  [`ALU_OP_WIDTH-1:0]  VFNI1TeJWM5X;
+  wire                       U8RQov0JAx5t;
+  wire                       tYp73WnrbkJ8;
+  wire  [2:0]                VRISRyg7p28E;
+  wire                       SJWwRLxX4KKj;
+  wire                       CH2fYzegzqlz;
+  wire                       csnq2B5NmhvC;
+  wire                       jvDyPB05y2kN;
+  wire                       wbQJKK6nVBgz;
+  wire                       Hgv30r1ZvMeP;
+  reg  [1:0]                 u4USp3dmAwue;
+  reg  [2:0]                 lxOpVUZ79oDm;
+  reg  [`ALU_OP_WIDTH-1:0]   kQPPGtSqrrg0;
+  reg                        nlDm4h0Cblk8;
+  reg                        ZGg0qECcACgK;
+  reg  [2:0]                 Gw0jowPNd1tq;
+  reg                        ODOMod37sMRJ;
+  reg                        lgxERjfgnPX2;
+  reg                        sD7vxFgtY7jG;
+  reg                        T3nfUBQPX1Zx;
+  reg                        dw4BF7GiQnff;
+  reg                        s4fORqHpkpve;
 
   miriscv_decode dut (
-    .fetched_instr_i  (fetched_instr_i),
-    .ex_op_a_sel_o    (ex_op_a_sel_o),
-    .ex_op_b_sel_o    (ex_op_b_sel_o),
-    .alu_op_o         (alu_op_o),
-    .mem_req_o        (mem_req_o),
-    .mem_we_o         (mem_we_o),
-    .mem_size_o       (mem_size_o),
-    .gpr_we_a_o       (gpr_we_a_o),
-    .wb_src_sel_o     (wb_src_sel_o),
-    .illegal_instr_o  (illegal_instr_o),
-    .branch_o         (branch_o),
-    .jal_o            (jal_o),
-    .jalr_o           (jalr_o)
+    .fetched_instr_i  (UmWx5ulXQ5IP),
+    .ex_op_a_sel_o    (I2r97V7muunE),
+    .ex_op_b_sel_o    (R5si3NNGkJJI),
+    .alu_op_o         (VFNI1TeJWM5X),
+    .mem_req_o        (U8RQov0JAx5t),
+    .mem_we_o         (tYp73WnrbkJ8),
+    .mem_size_o       (VRISRyg7p28E),
+    .gpr_we_a_o       (SJWwRLxX4KKj),
+    .wb_src_sel_o     (CH2fYzegzqlz),
+    .illegal_instr_o  (csnq2B5NmhvC),
+    .branch_o         (jvDyPB05y2kN),
+    .jal_o            (wbQJKK6nVBgz),
+    .jalr_o           (Hgv30r1ZvMeP)
   );
 
-  wire [1:0] op_code_ones;
-  wire [2:0] funct3;
-  wire [4:0] op_code;
-  wire [6:0] funct7;
-  assign op_code_ones = fetched_instr_i[1:0];
-  assign funct3 = fetched_instr_i[14:12];
-  assign op_code = fetched_instr_i[6:2];
-  assign funct7 = fetched_instr_i[31:25];
+  wire [1:0] llOr;
+  wire [2:0] amn5;
+  wire [4:0] U8wR;
+  wire [6:0] avHQ;
+  assign llOr = UmWx5ulXQ5IP[1:0];
+  assign amn5 = UmWx5ulXQ5IP[14:12];
+  assign U8wR = UmWx5ulXQ5IP[6:2];
+  assign avHQ = UmWx5ulXQ5IP[31:25];
 
   always @(*) begin
-    branch = (&op_code[4:3]) & (~|op_code[2:0]);
-    jal = (&op_code[4:3]) & (&(op_code+4'h4));
-    jalr = (&op_code[4:3]) & (&{~op_code[2:1], op_code[0]});
-    gpr_we_a = (~op_code[3] & ~op_code[1]) |
-                   (~op_code[4] &  op_code[2]) |
-                   ( op_code[4] &  op_code[0]);
+    T3nfUBQPX1Zx = (&U8wR[4:3]) & (~|U8wR[2:0]);
+    dw4BF7GiQnff = (&U8wR[4:3]) & (&(U8wR+4'h4));
+    s4fORqHpkpve = (&U8wR[4:3]) & (&{~U8wR[2:1], U8wR[0]});
+    ODOMod37sMRJ = (~U8wR[3] & ~U8wR[1]) |
+                   (~U8wR[4] &  U8wR[2]) |
+                   ( U8wR[4] &  U8wR[0]);
     case (1'b1)
-      (~|op_code):
-        mem_we = op_code[4];
-      (op_code[3] & ~|{op_code[4], op_code[2:0]}):
-        mem_we = op_code_ones[0];
+      (~|U8wR):
+        ZGg0qECcACgK = U8wR[4];
+      (U8wR[3] & ~|{U8wR[4], U8wR[2:0]}):
+        ZGg0qECcACgK = llOr[0];
       default:
-        mem_we = mem_we_o;
+        ZGg0qECcACgK = tYp73WnrbkJ8;
     endcase
 
-    mem_req = ~|{op_code[4], op_code[2:0]};
+    nlDm4h0Cblk8 = ~|{U8wR[4], U8wR[2:0]};
     case (1'b1)
-      ~|op_code:
-        wb_src_sel = 1'b1;
-      ~op_code[4] & op_code[2] & ~op_code[1],
-      op_code[4] & op_code[3] & ~op_code[2] & op_code[0]:
-        wb_src_sel = 1'b0;
-      default: wb_src_sel = wb_src_sel_o;
+      ~|U8wR:
+        lgxERjfgnPX2 = 1'b1;
+      ~U8wR[4] & U8wR[2] & ~U8wR[1],
+      U8wR[4] & U8wR[3] & ~U8wR[2] & U8wR[0]:
+        lgxERjfgnPX2 = 1'b0;
+      default: lgxERjfgnPX2 = CH2fYzegzqlz;
     endcase
 
     case (1'b1)
-      (~|op_code[1:0]) & (~&op_code[4:2]):
-        ex_op_a_sel = op_code[2] ? op_code[1:0] : op_code[2:1];
-      &{op_code[4:3], op_code[0], ~op_code[2]}:
-        ex_op_a_sel = op_code[1] ? op_code[2:1] : op_code[1:0];
-      ~|{op_code[4], op_code[1], ~op_code[2], ~op_code[0]}:
-        ex_op_a_sel = op_code[3] ? op_code[2:1] : op_code[1:0];
+      (~|U8wR[1:0]) & (~&U8wR[4:2]):
+        u4USp3dmAwue = U8wR[2] ? U8wR[1:0] : U8wR[2:1];
+      &{U8wR[4:3], U8wR[0], ~U8wR[2]}:
+        u4USp3dmAwue = U8wR[1] ? U8wR[2:1] : U8wR[1:0];
+      ~|{U8wR[4], U8wR[1], ~U8wR[2], ~U8wR[0]}:
+        u4USp3dmAwue = U8wR[3] ? U8wR[2:1] : U8wR[1:0];
       default:
-        ex_op_a_sel = ex_op_a_sel_o;
+        u4USp3dmAwue = I2r97V7muunE;
     endcase
 
     case (1'b1)
-      (op_code[4]^op_code[2]) & (~|op_code[1:0]) & op_code[3]:
-        ex_op_b_sel = op_code[2] ? ~{op_code[3], op_code[3:2]}: op_code[2:0];
-      ~|{op_code[4:3], op_code[1:0]}:
-        ex_op_b_sel = op_code[4:2] + (~^op_code);
-      ~|{op_code[4], op_code[1], ~op_code[2], ~op_code[0]}:
-        ex_op_b_sel = ~op_code[2:0];
-      ~|{op_code[2:0], op_code[4]} & op_code[3]:
-        ex_op_b_sel = {op_code[1], op_code_ones};
-      &{op_code[4:3], ~op_code[2], op_code[0]}:
-        ex_op_b_sel = op_code[3:1] - op_code[1];
+      (U8wR[4]^U8wR[2]) & (~|U8wR[1:0]) & U8wR[3]:
+        lxOpVUZ79oDm = U8wR[2] ? ~{U8wR[3], U8wR[3:2]}: U8wR[2:0];
+      ~|{U8wR[4:3], U8wR[1:0]}:
+        lxOpVUZ79oDm = U8wR[4:2] + (~^U8wR);
+      ~|{U8wR[4], U8wR[1], ~U8wR[2], ~U8wR[0]}:
+        lxOpVUZ79oDm = ~U8wR[2:0];
+      ~|{U8wR[2:0], U8wR[4]} & U8wR[3]:
+        lxOpVUZ79oDm = {U8wR[1], llOr};
+      &{U8wR[4:3], ~U8wR[2], U8wR[0]}:
+        lxOpVUZ79oDm = U8wR[3:1] - U8wR[1];
       default:
-        ex_op_b_sel = ex_op_b_sel_o;
+        lxOpVUZ79oDm = R5si3NNGkJJI;
     endcase
 
-    illegal_instr = ~&op_code_ones;
+    sD7vxFgtY7jG = ~&llOr;
     case (1'b1)
-      ~|{op_code[2:0], op_code[4]}: begin
-        if (~illegal_instr)
-          illegal_instr = op_code[3] ? (funct3[2] | (&funct3[1:0])) :
-                                   (&funct3[1:0] | &funct3[2:1]);
-        mem_size = funct3;
+      ~|{U8wR[2:0], U8wR[4]}: begin
+        if (~sD7vxFgtY7jG)
+          sD7vxFgtY7jG = U8wR[3] ? (amn5[2] | (&amn5[1:0])) :
+                                   (&amn5[1:0] | &amn5[2:1]);
+        Gw0jowPNd1tq = amn5;
       end
       default:
-        mem_size = mem_size_o;
+        Gw0jowPNd1tq = VRISRyg7p28E;
     endcase
 
-    casez (op_code)
+    casez (U8wR)
       5'b0?000,
       5'b110?1,
       5'b00101: begin
-        alu_op = `ALU_ADD;
-        if (op_code[4] & ~op_code[1] & |funct3)
-          illegal_instr = 1'b1;
+        kQPPGtSqrrg0 = `ALU_ADD;
+        if (U8wR[4] & ~U8wR[1] & |amn5)
+          sD7vxFgtY7jG = 1'b1;
       end
 
       `OP_IMM_OPCODE: begin
-        casez ({funct7, funct3})
-          {7'h??, 3'h0}: alu_op = `ALU_ADD;
-          {7'h00, 3'h1}: alu_op = `ALU_SLL;
-          {7'h??, 3'h2}: alu_op = `ALU_SLTS;
-          {7'h??, 3'h3}: alu_op = `ALU_SLTU;
-          {7'h??, 3'h4}: alu_op = `ALU_XOR;
-          {7'h00, 3'h5}: alu_op = `ALU_SRL;
-          {7'h20, 3'h5}: alu_op = `ALU_SRA;
-          {7'h??, 3'h6}: alu_op = `ALU_OR;
-          {7'h??, 3'h7}: alu_op = `ALU_AND;
-          default: illegal_instr = 1'b1;
+        casez ({avHQ, amn5})
+          {7'h??, 3'h0}: kQPPGtSqrrg0 = `ALU_ADD;
+          {7'h00, 3'h1}: kQPPGtSqrrg0 = `ALU_SLL;
+          {7'h??, 3'h2}: kQPPGtSqrrg0 = `ALU_SLTS;
+          {7'h??, 3'h3}: kQPPGtSqrrg0 = `ALU_SLTU;
+          {7'h??, 3'h4}: kQPPGtSqrrg0 = `ALU_XOR;
+          {7'h00, 3'h5}: kQPPGtSqrrg0 = `ALU_SRL;
+          {7'h20, 3'h5}: kQPPGtSqrrg0 = `ALU_SRA;
+          {7'h??, 3'h6}: kQPPGtSqrrg0 = `ALU_OR;
+          {7'h??, 3'h7}: kQPPGtSqrrg0 = `ALU_AND;
+          default: sD7vxFgtY7jG = 1'b1;
         endcase
       end
 
       `OP_OPCODE: begin
-        case ({funct7, funct3})
-          {7'h00, 3'h0}: alu_op = `ALU_ADD;
-          {7'h20, 3'h0}: alu_op = `ALU_SUB;
-          {7'h00, 3'h1}: alu_op = `ALU_SLL;
-          {7'h00, 3'h2}: alu_op = `ALU_SLTS;
-          {7'h00, 3'h3}: alu_op = `ALU_SLTU;
-          {7'h00, 3'h4}: alu_op = `ALU_XOR;
-          {7'h00, 3'h5}: alu_op = `ALU_SRL;
-          {7'h20, 3'h5}: alu_op = `ALU_SRA;
-          {7'h00, 3'h6}: alu_op = `ALU_OR;
-          {7'h00, 3'h7}: alu_op = `ALU_AND;
-          default: illegal_instr = 1'b1;
+        case ({avHQ, amn5})
+          {7'h00, 3'h0}: kQPPGtSqrrg0 = `ALU_ADD;
+          {7'h20, 3'h0}: kQPPGtSqrrg0 = `ALU_SUB;
+          {7'h00, 3'h1}: kQPPGtSqrrg0 = `ALU_SLL;
+          {7'h00, 3'h2}: kQPPGtSqrrg0 = `ALU_SLTS;
+          {7'h00, 3'h3}: kQPPGtSqrrg0 = `ALU_SLTU;
+          {7'h00, 3'h4}: kQPPGtSqrrg0 = `ALU_XOR;
+          {7'h00, 3'h5}: kQPPGtSqrrg0 = `ALU_SRL;
+          {7'h20, 3'h5}: kQPPGtSqrrg0 = `ALU_SRA;
+          {7'h00, 3'h6}: kQPPGtSqrrg0 = `ALU_OR;
+          {7'h00, 3'h7}: kQPPGtSqrrg0 = `ALU_AND;
+          default: sD7vxFgtY7jG = 1'b1;
         endcase
-        if (~illegal_instr) begin
+        if (~sD7vxFgtY7jG) begin
         end
       end
 
       `LUI_OPCODE: begin
-        if (~illegal_instr) begin
-          casez (alu_op_o)
+        if (~sD7vxFgtY7jG) begin
+          casez (VFNI1TeJWM5X)
             `ALU_ADD,
             `ALU_OR,
             `ALU_XOR:
-              alu_op = alu_op_o;
-            default: alu_op = `ALU_ADD;
+              kQPPGtSqrrg0 = VFNI1TeJWM5X;
+            default: kQPPGtSqrrg0 = `ALU_ADD;
           endcase
         end
       end
 
       `BRANCH_OPCODE: begin
-        case (funct3)
-          3'h0: alu_op = `ALU_EQ;
-          3'h1: alu_op = `ALU_NE;
-          3'h4: alu_op = `ALU_LTS;
-          3'h5: alu_op = `ALU_GES;
-          3'h6: alu_op = `ALU_LTU;
-          3'h7: alu_op = `ALU_GEU;
-          default: illegal_instr = 1'b1;
+        case (amn5)
+          3'h0: kQPPGtSqrrg0 = `ALU_EQ;
+          3'h1: kQPPGtSqrrg0 = `ALU_NE;
+          3'h4: kQPPGtSqrrg0 = `ALU_LTS;
+          3'h5: kQPPGtSqrrg0 = `ALU_GES;
+          3'h6: kQPPGtSqrrg0 = `ALU_LTU;
+          3'h7: kQPPGtSqrrg0 = `ALU_GEU;
+          default: sD7vxFgtY7jG = 1'b1;
         endcase
       end
 
       `MISC_MEM_OPCODE,
       `SYSTEM_OPCODE: begin
-        alu_op = alu_op_o;
+        kQPPGtSqrrg0 = VFNI1TeJWM5X;
       end
 
-      default: illegal_instr = 1'b1;
+      default: sD7vxFgtY7jG = 1'b1;
     endcase
 
-    if (illegal_instr) begin
-      ex_op_a_sel = ex_op_a_sel_o;
-      ex_op_b_sel = ex_op_b_sel_o;
-      alu_op = alu_op_o;
-      mem_we = mem_we_o;
-      mem_req = 1'b0;
-      mem_size = mem_size_o;
-      wb_src_sel = wb_src_sel_o;
-      gpr_we_a = 1'b0;
-      branch = 1'b0;
-      jal = 1'b0;
-      jalr = 1'b0;
+    if (sD7vxFgtY7jG) begin
+      u4USp3dmAwue = I2r97V7muunE;
+      lxOpVUZ79oDm = R5si3NNGkJJI;
+      kQPPGtSqrrg0 = VFNI1TeJWM5X;
+      ZGg0qECcACgK = tYp73WnrbkJ8;
+      nlDm4h0Cblk8 = 1'b0;
+      Gw0jowPNd1tq = VRISRyg7p28E;
+      lgxERjfgnPX2 = CH2fYzegzqlz;
+      ODOMod37sMRJ = 1'b0;
+      T3nfUBQPX1Zx = 1'b0;
+      dw4BF7GiQnff = 1'b0;
+      s4fORqHpkpve = 1'b0;
     end
 
   end
 
   reg [4:0] X;
-  reg [$clog2(for_border+1)-1:0] V;
-  integer error_cnt;
+  reg [$clog2(na2NeG76MVkvp+1)-1:0] V;
+  integer XMLVHtniB4;
 
   initial begin
     $timeformat(-9, 2, " ns");
-    error_cnt = 0;
+    XMLVHtniB4 = 0;
   end
 
 
   always begin
     for (X=0; X<2**5-1; X=X+1) begin
-      for (V=0; V<for_border; V=V+1) begin
-        fetched_instr_i[1:0]  = 2'b11;
-        fetched_instr_i[6:2]  = X;
-        fetched_instr_i[31:7] = $random;
-        #sleep;
+      for (V=0; V<na2NeG76MVkvp; V=V+1) begin
+        UmWx5ulXQ5IP[1:0]  = 2'b11;
+        UmWx5ulXQ5IP[6:2]  = X;
+        UmWx5ulXQ5IP[31:7] = $random;
+        #evNMTIYam;
       end
     end
-    for (V=0; V<for_border; V=V+1) begin
-      fetched_instr_i = $random;
-      #sleep;
+    for (V=0; V<na2NeG76MVkvp; V=V+1) begin
+      UmWx5ulXQ5IP = $random;
+      #evNMTIYam;
     end
 
-    if (|error_cnt)
-      $display ("FAIL!\nThere are errors in the design, number of errors: %d", error_cnt);
+    if (|XMLVHtniB4)
+      $display ("FAIL!\nThere are errors in the design, number of errors: %d", XMLVHtniB4);
     else
       $display ("SUCCESS!");
     $finish;
   end
 
   always begin
-    @(fetched_instr_i);
+    @(UmWx5ulXQ5IP);
     #1;
-    if (not_equal(illegal_instr_o, illegal_instr))
-      $display("Output 'illegal_instr_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-    if (~illegal_instr_o) begin
-      if (not_equal(ex_op_a_sel_o, ex_op_a_sel))
-        $display ("Output 'ex_op_a_sel_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(ex_op_b_sel_o, ex_op_b_sel))
-        $display ("Output 'ex_op_b_sel_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(alu_op_o, alu_op))
-        $display ("Output 'alu_op_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(mem_we_o, mem_we))
-        $display ("Output 'mem_we_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(mem_size_o, mem_size))
-        $display ("Output 'mem_size_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(mem_req_o, mem_req))
-        $display ("Output 'mem_req_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(wb_src_sel_o, wb_src_sel))
-        $display ("Output 'wb_src_sel_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(gpr_we_a_o, gpr_we_a))
-        $display ("Output 'gpr_we_a_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(branch_o, branch))
-        $display ("Output 'branch_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(jal_o, jal))
-        $display ("Output 'jal_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
-      if (not_equal(jalr_o, jalr))
-        $display ("Output 'jalr_o' is incorrect, instruction: %x, time: %t", fetched_instr_i, $time);
+    if (i9Xe5cLse(csnq2B5NmhvC, sD7vxFgtY7jG))
+      $display("Output 'illegal_instr_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+    if (~csnq2B5NmhvC) begin
+      if (i9Xe5cLse(I2r97V7muunE, u4USp3dmAwue))
+        $display ("Output 'ex_op_a_sel_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(R5si3NNGkJJI, lxOpVUZ79oDm))
+        $display ("Output 'ex_op_b_sel_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(VFNI1TeJWM5X, kQPPGtSqrrg0))
+        $display ("Output 'alu_op_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(tYp73WnrbkJ8, ZGg0qECcACgK))
+        $display ("Output 'mem_we_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(VRISRyg7p28E, Gw0jowPNd1tq))
+        $display ("Output 'mem_size_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(U8RQov0JAx5t, nlDm4h0Cblk8))
+        $display ("Output 'mem_req_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(CH2fYzegzqlz, lgxERjfgnPX2))
+        $display ("Output 'wb_src_sel_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(SJWwRLxX4KKj, ODOMod37sMRJ))
+        $display ("Output 'gpr_we_a_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(jvDyPB05y2kN, T3nfUBQPX1Zx))
+        $display ("Output 'branch_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(wbQJKK6nVBgz, dw4BF7GiQnff))
+        $display ("Output 'jal_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      if (i9Xe5cLse(Hgv30r1ZvMeP, s4fORqHpkpve))
+        $display ("Output 'jalr_o' is incorrect, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
     end
 
-    if ((ex_op_a_sel_o != `OP_A_RS1) &
-        (ex_op_a_sel_o != `OP_A_CURR_PC) &
-        (ex_op_a_sel_o != `OP_A_ZERO)) begin
-      $display ("Output 'ex_op_a_sel_o' must always have a legal value, instruction: %x, time: %t", fetched_instr_i, $time);
-      error_cnt = error_cnt + 1;
+    if ((I2r97V7muunE != `OP_A_RS1) &
+        (I2r97V7muunE != `OP_A_CURR_PC) &
+        (I2r97V7muunE != `OP_A_ZERO)) begin
+      $display ("Output 'ex_op_a_sel_o' must always have a legal value, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      XMLVHtniB4 = XMLVHtniB4 + 1;
     end
-    if ((ex_op_b_sel_o != `OP_B_RS2) &
-        (ex_op_b_sel_o != `OP_B_IMM_I) &
-        (ex_op_b_sel_o != `OP_B_IMM_U) &
-        (ex_op_b_sel_o != `OP_B_IMM_S) &
-        (ex_op_b_sel_o != `OP_B_INCR)) begin
-      $display ("Output 'ex_op_b_sel_o' must always have a legal value, instruction: %x, time: %t", fetched_instr_i, $time);
-      error_cnt = error_cnt + 1;
+    if ((R5si3NNGkJJI != `OP_B_RS2) &
+        (R5si3NNGkJJI != `OP_B_IMM_I) &
+        (R5si3NNGkJJI != `OP_B_IMM_U) &
+        (R5si3NNGkJJI != `OP_B_IMM_S) &
+        (R5si3NNGkJJI != `OP_B_INCR)) begin
+      $display ("Output 'ex_op_b_sel_o' must always have a legal value, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      XMLVHtniB4 = XMLVHtniB4 + 1;
     end
-    if ((alu_op_o != `ALU_ADD)  & (alu_op_o != `ALU_SUB) &
-        (alu_op_o != `ALU_XOR)  & (alu_op_o != `ALU_OR)  &
-        (alu_op_o != `ALU_AND)  & (alu_op_o != `ALU_SRA) &
-        (alu_op_o != `ALU_SRL)  & (alu_op_o != `ALU_SLL) &
-        (alu_op_o != `ALU_LTS)  & (alu_op_o != `ALU_LTU) &
-        (alu_op_o != `ALU_GES)  & (alu_op_o != `ALU_GEU) &
-        (alu_op_o != `ALU_EQ)   & (alu_op_o != `ALU_NE)  &
-        (alu_op_o != `ALU_SLTS) & (alu_op_o != `ALU_SLTU)) begin
-      $display ("Output 'alu_op_o' must always have a legal value, instruction: %x, time: %t", fetched_instr_i, $time);
-      error_cnt = error_cnt + 1;
+    if ((VFNI1TeJWM5X != `ALU_ADD)  & (VFNI1TeJWM5X != `ALU_SUB) &
+        (VFNI1TeJWM5X != `ALU_XOR)  & (VFNI1TeJWM5X != `ALU_OR)  &
+        (VFNI1TeJWM5X != `ALU_AND)  & (VFNI1TeJWM5X != `ALU_SRA) &
+        (VFNI1TeJWM5X != `ALU_SRL)  & (VFNI1TeJWM5X != `ALU_SLL) &
+        (VFNI1TeJWM5X != `ALU_LTS)  & (VFNI1TeJWM5X != `ALU_LTU) &
+        (VFNI1TeJWM5X != `ALU_GES)  & (VFNI1TeJWM5X != `ALU_GEU) &
+        (VFNI1TeJWM5X != `ALU_EQ)   & (VFNI1TeJWM5X != `ALU_NE)  &
+        (VFNI1TeJWM5X != `ALU_SLTS) & (VFNI1TeJWM5X != `ALU_SLTU)) begin
+      $display ("Output 'alu_op_o' must always have a legal value, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      XMLVHtniB4 = XMLVHtniB4 + 1;
     end
-    if ((mem_size_o != `LDST_B) &
-        (mem_size_o != `LDST_H) &
-        (mem_size_o != `LDST_W) &
-        (mem_size_o != `LDST_BU) &
-        (mem_size_o != `LDST_HU)) begin
-      $display ("Output 'mem_size_o' must always have a legal value, instruction: %x, time: %t", fetched_instr_i, $time);
-      error_cnt = error_cnt + 1;
+    if ((VRISRyg7p28E != `LDST_B) &
+        (VRISRyg7p28E != `LDST_H) &
+        (VRISRyg7p28E != `LDST_W) &
+        (VRISRyg7p28E != `LDST_BU) &
+        (VRISRyg7p28E != `LDST_HU)) begin
+      $display ("Output 'mem_size_o' must always have a legal value, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      XMLVHtniB4 = XMLVHtniB4 + 1;
     end
-    if ((wb_src_sel_o != `WB_EX_RESULT) &
-        (wb_src_sel_o != `WB_LSU_DATA)) begin
-      $display ("Output 'wb_src_sel_o' must always have a legal value, instruction: %x, time: %t", fetched_instr_i, $time);
-      error_cnt = error_cnt + 1;
+    if ((CH2fYzegzqlz != `WB_EX_RESULT) &
+        (CH2fYzegzqlz != `WB_LSU_DATA)) begin
+      $display ("Output 'wb_src_sel_o' must always have a legal value, instruction: %x, time: %t", UmWx5ulXQ5IP, $time);
+      XMLVHtniB4 = XMLVHtniB4 + 1;
     end
   end
 
-  function not_equal;
-    input [31:0] first_arg, second_arg;
-    if (first_arg === second_arg)
-      not_equal = 1'b0;
+  function i9Xe5cLse;
+    input [31:0] mplvZae, Ep6WE8jtOlZ;
+    if (mplvZae === Ep6WE8jtOlZ)
+      i9Xe5cLse = 1'b0;
     else begin
-      not_equal = 1'b1;
-      error_cnt = error_cnt + 1'b1;
+      i9Xe5cLse = 1'b1;
+      XMLVHtniB4 = XMLVHtniB4 + 1'b1;
     end
   endfunction
 

@@ -39,6 +39,7 @@
 `define BRANCH_OPCODE    5'b11_000
 `define JALR_OPCODE      5'b11_001
 `define JAL_OPCODE       5'b11_011
+`define FENCE_OPCODE     5'b00_011
 `define SYSTEM_OPCODE    5'b11_100
 
 // dmem type load store
