@@ -2,7 +2,7 @@
 
 `include "../rtl/miriscv_defines.v"
 
-module tb_miriscv_decode();
+module tb_miriscv_decode_my();
 
 reg   [31:0]               fetched_instr_i;
 wire  [1:0]                ex_op_a_sel_o;
@@ -36,7 +36,7 @@ miriscv_decode dut (
 
 initial begin
 	#5
-	fetched_instr_i = 'h5cbd8683;
+	fetched_instr_i = 'h3e38320f;
 end
 
 endmodule

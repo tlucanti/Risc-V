@@ -2,7 +2,7 @@
 
 `include "../rtl/miriscv_defines.v"
 
-module tb_miriscv_decode_obf();
+module tb_miriscv_decode();
 
   parameter sleep = 4;
   parameter for_border = 100; // per one opcode
