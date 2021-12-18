@@ -36,7 +36,7 @@ miriscv_decode dut (
 
 initial begin
 	#5
-	fetched_instr_i = 'h3e38320f;
+	fetched_instr_i = 'h_28f2e813;
 end
 
 endmodule

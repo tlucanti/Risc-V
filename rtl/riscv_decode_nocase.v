@@ -63,31 +63,48 @@ module miriscv_decode
 wire     [4:0] op_code;
 wire     [2:0] funct3;
 wire     [6:0] funct7;
+wire     [3:0] op_code_no6;
 wire     alu_op;
-wire     [3:0] op_code_no3;
+wire     mem_req;
+wire     ill_opcode;
+wire     ill_funct7;
 
 assign op_code       = fetched_instr_i[6:2];
 assign funct3        = fetched_instr_i[14:12];
 assign funct7        = fetched_instr_i[31:25];
-assign alu_op        = op_code_no3 == 4'b0100;
-assign op_code_no6   = {op_code[3], op_code[2:0]};
+assign alu_op        = op_code_no6 == 4'b0100;
+assign op_code_no6   = {op_code[4], op_code[2:0]};
+assign mem_req       = op_code_no6 == 4'b0000;
+// assign ill_funct7    = {funct7[6], funct7[5:0]} != 6'b000_000
+   // && (op_code == `OP_OPCODE || {funct3, op_code} == 8'b10100100;
+assign ill_funct7    = {funct7[6], funct7[5:0]} != 6'b000_000
+   && (op_code == `OP_OPCODE || {funct3[1:0], op_code} == 7'b0100100);
+assign ill_opcode    = op_code != `LOAD_OPCODE && op_code != `OP_IMM_OPCODE &&
+   op_code != `AUIPC_OPCODE && op_code != `STORE_OPCODE &&
+   op_code != `OP_OPCODE && op_code != `LUI_OPCODE &&
+   op_code != `BRANCH_OPCODE && op_code != `JALR_OPCODE &&
+   op_code != `JAL_OPCODE && op_code != `FENCE_OPCODE &&
+   op_code != `SYSTEM_OPCODE;
 
 assign ex_op_a_sel_o = ex_op_a_sel_o_set(op_code);
 assign ex_op_b_sel_o = ex_op_b_sel_o_set(op_code);
-assign alu_op_o      = alu_op_o_set(branch_o, alu_op, funct3, funct7[5]);
-assign mem_req_o     = op_code_no3 == 4'b0000 & !illegal_instr_o;
-assign mem_we_o      = op_code == `LOAD_OPCODE;
-assign mem_size_o    = funct3;
-assign gpr_we_a_o    = op_code[3:0] != 4'b1000 & !illegal_instr_o;
-assign wb_src_sel_o  = mem_we_o;
+assign alu_op_o      = alu_op_o_set(branch_o, alu_op, funct3, funct7[5], op_code[3]);
+assign mem_req_o     = mem_req && !illegal_instr_o;
+assign mem_we_o      = op_code == `STORE_OPCODE;
+assign mem_size_o    = (funct3 == 3'b011 || funct3[2:1] == 2'b11) ? 3'b000 : funct3;
+assign gpr_we_a_o    = op_code[3:0] != 4'b1000 && !illegal_instr_o &&
+   op_code != `FENCE_OPCODE && op_code != `SYSTEM_OPCODE;
+assign wb_src_sel_o  = mem_req_o;
 assign branch_o      = op_code == `BRANCH_OPCODE;
 assign jal_o         = op_code == `JAL_OPCODE;
 assign jalr_o        = op_code == `JALR_OPCODE;
 
-assign illegal_instr_o = 0;
+assign illegal_instr_o = (branch_o && funct3[2:1] == 2'b01)  ||
+   (mem_req && funct3 == 3'b011) || (mem_req && funct3[2:1] == 2'b11) ||
+   (op_code == `STORE_OPCODE && funct3[2:1] == 2'b10) || ill_opcode || ill_funct7;
 
-function ex_op_a_sel_o_set (input [4:0] op_code);
-   if (op_code[2:0] == 2'b00) begin
+function [1:0] ex_op_a_sel_o_set (input [4:0] op_code);
+   if (op_code[1:0] == 2'b00) begin
       ex_op_a_sel_o_set = 2'd0;
    end else if (op_code[3:2] == 2'b11) begin
       ex_op_a_sel_o_set = 2'd2;
@@ -96,30 +113,34 @@ function ex_op_a_sel_o_set (input [4:0] op_code);
    end
 endfunction
 
-function ex_op_b_sel_o_set (input [4:0] op_code);
+function [2:0] ex_op_b_sel_o_set (input [4:0] op_code);
    if (op_code == `STORE_OPCODE) begin
       ex_op_b_sel_o_set = 3'd3;
    end else if ({op_code[4], op_code[0]} == 2'b11) begin
       ex_op_b_sel_o_set = 3'd4;
    end else if (op_code[0]) begin
       ex_op_b_sel_o_set = 3'd2;
-   end begin
-      ex_op_b_sel_o_set = {0, 0, ~op_code[3]};
+   end else begin
+      ex_op_b_sel_o_set = {2'b00, ~op_code[3]};
    end
 endfunction
 
-function alu_op_o_set (
+function [`ALU_OP_WIDTH-1:0] alu_op_o_set (
    input branch_o,
    input alu_op,
    input [2:0] funct3,
-   input f7,
+   input f7_5,
+   input op3
 );
-   if (branch_o) begin
-      alu_op_o = {2'b11, funct3};
+   if (illegal_instr_o) begin
+      alu_op_o_set = `ALU_ADD;
+   end else if (branch_o) begin
+      alu_op_o_set = {2'b11, funct3};
    end else if (alu_op) begin
-      alu_op_o = {1'b0, f7, funct3};
+      alu_op_o_set = {1'b0, f7_5 & op3, funct3};
    end else begin
-      alu_op_o = `ALU_ADD;
+      alu_op_o_set = `ALU_ADD;
    end
 endfunction
 
+endmodule

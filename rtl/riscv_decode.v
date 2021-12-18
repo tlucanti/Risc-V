@@ -43,7 +43,7 @@
 
 `include "miriscv_defines.v"
 
-module miriscv_decode
+module miriscv_decode_case
 (
    input    [31:0]                   fetched_instr_i,
    output reg   [1:0]                ex_op_a_sel_o,
