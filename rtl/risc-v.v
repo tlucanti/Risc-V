@@ -5,7 +5,7 @@
 // 
 // Create Date: 25.09.2021 11:05:30
 // Design Name: RISC-V
-// Module Name: risk-5
+// Module Name: risc-v
 // Project Name: RISC-V
 // Target Devices: any
 // Tool Versions: 2021.2
@@ -81,32 +81,57 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-module risk_5 (
-    input           reset,
-    input           clk,
-    input   [7:0]   sw
+module risc_5 (
+    input           RESET,
+    input           CLK,
+    input   [7:0]   SW
 );
 
 wire            pc_do_branch;
 /*
-
+    flag to set value to be added to programm counter `reg_pc`, if 1 - adding
+    immidiate, else 4 bytes (32 bit) as isntruction size is 32 bit
 */
 
-wire            imm_I;
+wire    [31:0]  imm_I;
 /*
-
+    sign extended immidiate for I-TYPE instructions
+    extended as:
+    ┌─────────────────────────────────────────────┬──────────────┐
+    │                 instr[31]                   │ instr[30:20] │ isntruction
+    ├─────────────────────────────────────────────┼──────────────┤
+    │               imm_I[31:11]                  │  imm_I[10:0] │ imm_I result
+    └─────────────────────────────────────────────┴──────────────┘
 */
-wire            imm_S;
+wire    [31:0]  imm_S;
 /*
-
+    sign extended immidiate for S-TYPE instructions
+    extended as:
+    ┌───────────────────────────────┬──────────────┬─────────────┐
+    │          instr[31]            │ instr[30:25] │ instr[11:7] │ isntruction
+    ├───────────────────────────────┼──────────────┼─────────────┤
+    │         imm_S[31:11]          │ imm_S[10:5]  │  imm_S[4:0] │ imm_S result
+    └───────────────────────────────┴──────────────┴─────────────┘
 */
-wire            imm_J;
+wire    [31:0]  imm_J;
 /*
-
+    sign extended immidiate for B-TYPE instructions
+    extended as:
+    ┌──────────────┬──────────────┬───────────┬──────────────┬───┐
+    │  instr[31]   │ instr[19:12] │ instr[20] │ instr[30:21] │ ~ │ isntruction
+    ├──────────────┼──────────────┼───────────┼──────────────┼───┤
+    │ imm_B[31:20] │ imm_B[19:12] │ imm_B[11] │  imm_B[10:1] │ 0 │ imm_B result
+    └──────────────┴──────────────┴───────────┴──────────────┴───┘
 */
-wire            imm_B;
+wire    [31:0]  imm_B;
 /*
-
+    sign extended immidiate for B-TYPE instructions
+    extended as:
+    ┌───────────────┬───────────┬──────────────┬─────────────┬───┐
+    │   instr[31]   │ instr[7]  │ instr[30:25] │ instr[11:8] │ ~ │ isntruction
+    ├───────────────┼───────────┼──────────────┼─────────────┼───┤
+    │  imm_B[31:12] │ imm_B[11] │ imm_B[10:5]  │  imm_B[4:1] │ 0 │ imm_B result
+    └───────────────┴───────────┴──────────────┴─────────────┴───┘
 */
 
 // --------------------------------- ALU WIRES ---------------------------------
@@ -185,60 +210,114 @@ wire    [1:0]   dcode_alu_op1_sel_o;
 /*
     driving signal for alu first (left) operand `alu_op1_i`, one of:
 
-    0 - `rf_rd1_o`  | data from (rd1) reg file
-    1 - `reg_pc`    | program counter
-    2 - zero        | 32 bit extended zero
+    0 - `rf_rd1_o`          | data from (rd1) reg file
+    1 - `reg_pc`            | program counter
+    2 - zero                | 32 bit extended zero
 */
-wire    [2:0]   dcode_alu_op1_sel_o;
+wire    [2:0]   dcode_alu_op2_sel_o;
 /*
     driving signal for alu second (right) operand `alu_op2_i`, one of:
 
-    0 - `rf_rd2_o`  | data from (rd2) reg file
-    1 - ``    | program counter
-    2 - zero        | 32 bit extended zero
+    0 - `rf_rd2_o`          | data from (rd2) reg file
+    1 - imm_I               | sign extended I-TYPE immidiate
+    2 - instr[31:12], 12'b0 | unsined extended immidite (for `lui` instruction)
+    3 - imm_S               | sign extended S-TYPE immidiate
+    4 - 32'd4               | unsigned extended 4 (for `jal` instruction)
 */
 wire    [`ALU_OP_WIDTH-1:0] dcode_alu_opode_o;
 /*
-
+    opcode for operation on alu
 */
 wire            dcode_mem_req_o;
 /*
-
+    memory interface - mem enable flag
 */
 wire            dcode_mem_we_o;
 /*
-
+    memory interface - mem read/write switch: 1 - write, 0 - read
 */
 wire    [2:0]   dcode_mem_size_o;
 /*
-
+    memory interface - mem read size
 */
 wire            dcode_rf_we_o;
 /*
-
+    ref file write enable flag
 */
 wire            dcode_rf_wd_sel_o;
 /*
+    drivin signal for write data source:
 
+    0 - `alu_sol_o`         | write alu operation to reg file
+    1 - `mem_data_o`        | write data from memory to reg file
 */
 wire            illegal_instr_o;
 /*
+    illegal instruction flag, set if `instr_instr_o` is invalid and than - no
+    operation happened
+    flag is 1 if one of following condition is true:
 
+    1. op_code of instruction is not one of valid RISC-V i32 instructions (not
+        one of `slli`, `srli`, `srai`, `add`, `sub`, `sll`, `slt`, `sltu`,
+        `xor`, `srl`, `sra`, `or`, `ans`, `jalr`, `lb`, `lh`, `lw`, `lbu`,
+        `lhu`, `addi`, `slti`, `sltiu`, `xori`, `ori`, `andi`, `fence`, `ecall`,
+        `ebreak`, `sb`, `sh`, `sw`, `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`,
+        `lui`, `auipc`, `jal`)
+    2. in branch operation (B-TYPE) funct3 is one of 010, 011
+    3. in memory required operations (LOAD and STORE instructions) funct3 is one
+        of 011, 110, 111
+    4. in STORE instructions funct3 is one of 100, 101
+    5. funct7 is NOT one of 0000000, 0100000
 */
 
 wire            branch_o;
 /*
-
+    flag that curent operation is B-TYPE (one of `beq`, `bne`, `blt`, `bge`,
+    `bltu`, `bgeu` instructions)
 */
 wire            jal_o;
 /*
-
+    flag that current operation is J-TYPE (`jal` instruction)
 */
 wire            jalr_o;
 /*
-
+    flag that current instruction is `jalr`
 */
 
+// ------------------------------- MEMORY WIRES --------------------------------
+wire    [31:0]  mem_addr_i;
+/*
+    input addres for memory to read from or write to
+*/
+wire    [31:0]  mem_data_i;
+/*
+    data to write to memory by `mem_addr_i` address
+*/
+wire            mem_req_i;
+/*
+    memory enable flag - if 0 - no operaton with memory will happen
+*/
+wire            mem_we_i;
+/*
+    memory write/read switcher: if 1 - module will write data, if 0 - module
+    will read data by `mem_addr_i` address
+*/
+wire    [2:0]   mem_size_i;
+/*
+    option to set size of data to read from memory
+
+    0 - signed  8bit value extended to 32bit
+    1 - signed 16bit value extended to 32bit
+    2 - 32bit value
+    3 - not valid
+    4 - unsigned  8bit value extended to 32bit
+    5 - unsigned 16bit value extended to 32bit
+*/
+
+wire    [31:0]  mem_data_o;
+/*
+    output 32bit data read from `mem_addr_i` address
+*/
 
 // --------------------------------- REGISTER ----------------------------------
 reg     [31:0]  reg_pc;
@@ -277,19 +356,30 @@ mem_inst INSTRUCTION_MEMORY (
 );
 
 miriscv_decode MAIN_DECODER (
-    .fetched_instr_i(dcode_isntr_i),      //  bit |
-    .ex_op_a_sel_o  (dcode_alu_op1_sel_o),//  bit |
-    .ex_op_b_sel_o  (dcode_alu_op1_sel_o),//  bit |
-    .alu_op_o       (dcode_alu_opode_o),  //  bit |
-    .mem_req_o      (dcode_mem_req_o),    //  bit |
-    .mem_we_o       (dcode_mem_we_o),     //  bit |
-    .mem_size_o     (dcode_mem_size_o),   //  bit |
-    .gpr_we_a_o     (dcode_rf_we_o),      //  bit |
-    .wb_src_sel_o   (dcode_rf_wd_sel_o),  //  bit |
-    .illegal_instr_o(illegal_instr_o),    //  bit |
-    .branch_o       (branch_o),           //  bit |
-    .jal_o          (jal_o),              //  bit |
-    .jalr_o         (jalr_o)              //  bit |
+    .fetched_instr_i(dcode_isntr_i),      // 32 bit | raw instruction
+    .ex_op_a_sel_o  (dcode_alu_op1_sel_o),//  2 bit | sel first alu operand
+    .ex_op_b_sel_o  (dcode_alu_op2_sel_o),//  3 bit | sel second alu operand
+    .alu_op_o       (dcode_alu_opode_o),  //  4 bit | alu opcode
+    .mem_req_o      (dcode_mem_req_o),    //  1 bit | mem enable flag
+    .mem_we_o       (dcode_mem_we_o),     //  1 bit | mem read/write sel
+    .mem_size_o     (dcode_mem_size_o),   //  3 bit | mem return size
+    .gpr_we_a_o     (dcode_rf_we_o),      //  1 bit | reg file write enable
+    .wb_src_sel_o   (dcode_rf_wd_sel_o),  //  1 bit | reg file write data sel
+    .illegal_instr_o(illegal_instr_o),    //  1 bit | illegal instruction flag
+    .branch_o       (branch_o),           //  1 bit | branch operation flag
+    .jal_o          (jal_o),              //  1 bit | `jal` instruction flag
+    .jalr_o         (jalr_o)              //  1 bit | `jalr` instruction flag
+);
+
+miriscv_ram RAM (
+    .reset          (RESET),              //  1 bit | reset
+    .clk            (CLK),                //  1 bit | clock
+    .mem_addr_i     (mem_addr_i),         // 31 bit | read/write address
+    .mem_data_i     (mem_data_i),         // 31 bit | data to write
+    .mem_req_i      (mem_req_i),          //  1 bit | mem enable
+    .mem_we_i       (mem_we_i),           //  1 bit | 1 - write, 0 - read
+    .mem_size_i     (mem_size_i),         //  3 bit | return data size
+    .mem_data_o     (mem_data_o)          // 31 bit | return data from mem
 );
 
 // -------------------------------- WIRE ASSIGNS -------------------------------
@@ -302,28 +392,37 @@ assign  alu_op1_i       = decoder_3 (
 assign  alu_op2_i       = decoder_5 (
     dcode_alu_op2_sel_o,                  //  3 bit | driving select
     rf_rd2_o,                             // 32 bit | select 0
-    imm_I                                 // 32 bit | select 1
-    {instr_instr_o[31:12], 20'b0},        // 32 bit | select 2
+    imm_I,                                // 32 bit | select 1
+    {instr_instr_o[31:12], 12'b0},        // 32 bit | select 2
     imm_S,                                // 32 bit | select 3
     32'd4                                 // 32 bit | select 4
 );
+assign alu_opcode_i     = dcode_alu_opode_o;
 
 assign  rf_ra1_i        = instr_instr_o[19:15];
 assign  rf_ra2_i        = instr_instr_o[24:20];
 assign  rf_wa_i         = instr_instr_o[11:7];
-assign  rf_wd_i         = dcode_rf_wd_sel_o ?  : alu_sol_o;
+assign  rf_wd_i         = dcode_rf_wd_sel_o ? mem_data_o : alu_sol_o;
 assign  rf_we_i         = dcode_rf_we_o;
+
+assign  mem_addr_i      = alu_sol_o;
+assign  mem_data_i      = rf_rd2_o;
+assign  mem_req_i       = dcode_mem_req_o;
+assign  mem_we_i        = dcode_mem_we_o;
+assign  mem_size_i      = dcode_mem_size_o;
 
 assign  instr_addr_i    = reg_pc;
 
 assign  dcode_isntr_i   = instr_instr_o;
 
-assign  pc_do_branch    = jalr_o || (alu_flag_o && branch_o);
+assign  pc_do_branch    = jal_o || (alu_flag_o && branch_o);
 
-assign  imm_I           = ;
-assign  imm_S           = ;
-assign  imm_J           = ;
-assign  imm_B           = ;
+assign  imm_I           = $signed(instr_instr_o[31:20]);
+assign  imm_S           = $signed({instr_instr_o[31:25], instr_instr_o[11:7]});
+assign  imm_J           = $signed({instr_instr_o[31], instr_instr_o[19:12],
+    instr_instr_o[20], instr_instr_o[30:21], 1'b0});
+assign  imm_B           = $signed({instr_instr_o[31], instr_instr_o[7],
+    instr_instr_o[30:25], instr_instr_o[11:8], 1'b0});
 
 // --------------------------------- FUNCTIONS ---------------------------------
 function automatic [31:0] decoder_3;
@@ -357,11 +456,11 @@ function automatic [31:0] decoder_5;
 
     begin
         case (select)
-            2'd0: decoder_5 = out_0;
-            2'd1: decoder_5 = out_1;
-            2'd2: decoder_5 = out_2;
-            2'd2: decoder_5 = out_3;
-            2'd2: decoder_5 = out_4;
+            3'd0: decoder_5 = out_0;
+            3'd1: decoder_5 = out_1;
+            3'd2: decoder_5 = out_2;
+            3'd3: decoder_5 = out_3;
+            3'd4: decoder_5 = out_4;
         endcase
     end
 endfunction
@@ -375,11 +474,12 @@ always @(posedge CLK) begin
             reg_pc <= rf_rd1_o + imm_I;
         end else begin
             if (pc_do_branch) begin
-                reg_pc <= reg_pc + branch_o ? imm_B : imm_J;
+                reg_pc <= reg_pc + (branch_o ? imm_B : imm_J);
             end else begin
                 reg_pc <= reg_pc + 31'd4;
             end
         end
     end
+end
 
 endmodule
