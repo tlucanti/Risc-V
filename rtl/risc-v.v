@@ -427,7 +427,8 @@ assign  imm_B           = $signed({instr_instr_o[31], instr_instr_o[7],
 // --------------------------------- FUNCTIONS ---------------------------------
 function automatic [31:0] decoder_3;
 /*
-
+    simple decoder function - return one of three outputs 0, 1 or 2 according to
+    `select` value
 */
     input [1:0]     select;
     input [31:0]    out_0;
@@ -445,7 +446,8 @@ endfunction
 
 function automatic [31:0] decoder_5;
 /*
-
+    simple decoder function - return one of five outputs 0, 1, .. 5 according to
+    `select` value
 */
     input [2:0]     select;
     input [31:0]    out_0;
@@ -471,7 +473,7 @@ always @(posedge CLK) begin
     end
     else begin
         if (jalr_o) begin
-            reg_pc <= rf_rd1_o + imm_I;
+            reg_pc <= rf_rd1_o + (imm_I << 2);
         end else begin
             if (pc_do_branch) begin
                 reg_pc <= reg_pc + (branch_o ? imm_B : imm_J);

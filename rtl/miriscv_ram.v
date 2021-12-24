@@ -13,10 +13,19 @@
 //   sync module
 //   module implements random access memory with interface for risc-v processor
 // Parameters:
-//   RESET   - reset signal
-//   CLK     - clock signal
-//   SW      - values from switches
-//
+//   RESET      - reset signal
+//   CLK        - clock signal
+//   mem_addr_i - address of memory to read or write to
+//   mem_data_i - data to write by `mem_addr_i` address
+//   mem_req_i  - memory enable flag
+//   mem_we_i   - memory read/write switch 1 - write `mem_data_i` to
+//     `mem_addr_i` address, 0 - read from `mem_addr_i` address to `mem_data_o`
+//   mem_size_i - size of read/write address:
+//     3'd0: signed byte (8 bit)
+//     3'd1: signed half (16 bit)
+//     3'd2: word (32 bit)
+//     3'd4: unsigned byte (8 bit)
+//     3'd5: unsigned half (16 bit)
 // Dependencies: None
 // 
 // Revision:
@@ -42,7 +51,8 @@ assign  mem_data_o = get_mem(mem_addr_i, mem_size_i);
 
 function automatic [31:0] get_mem;
 /*
-
+    return memory value of giving size sign or unsigned extended by `mem_addr_i`
+    address, or write `mem_data_i` cut to giving size to `mem_addr_i` address
 */
     input   [31:0]  mem_addr;
     input   [2:0]   mem_size;
