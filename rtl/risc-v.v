@@ -133,6 +133,16 @@ wire    [31:0]  imm_B;
     │  imm_B[31:12] │ imm_B[11] │ imm_B[10:5]  │  imm_B[4:1] │ 0 │ imm_B result
     └───────────────┴───────────┴──────────────┴─────────────┴───┘
 */
+wire    [31:0]  imm_U;
+/*
+    sign extended immidiate for `lui` instruction
+    extended as:
+    ┌─────────────────────────────────────┬──────────────────────┐
+    │             instr[31:0]             │           ~          │ isntruction
+    ├─────────────────────────────────────┼──────────────────────┤
+    │            imm_B[31:12]             │         12'b0        │ imm_U result
+    └─────────────────────────────────────┴──────────────────────┘
+*/
 
 // --------------------------------- ALU WIRES ---------------------------------
 wire    [31:0]  alu_op1_i;
@@ -417,12 +427,23 @@ assign  dcode_isntr_i   = instr_instr_o;
 
 assign  pc_do_branch    = jal_o || (alu_flag_o && branch_o);
 
-assign  imm_I           = $signed(instr_instr_o[31:20]);
-assign  imm_S           = $signed({instr_instr_o[31:25], instr_instr_o[11:7]});
-assign  imm_J           = $signed({instr_instr_o[31], instr_instr_o[19:12],
-    instr_instr_o[20], instr_instr_o[30:21], 1'b0});
-assign  imm_B           = $signed({instr_instr_o[31], instr_instr_o[7],
-    instr_instr_o[30:25], instr_instr_o[11:8], 1'b0});
+assign  imm_I           = {
+    {21{instr_instr_o[31]}}, instr_instr_o[30:20]
+};
+assign  imm_S           = {
+    {21{instr_instr_o[31]}}, instr_instr_o[30:25], instr_instr_o[11:7]
+};
+assign  imm_B           = {
+    {20{instr_instr_o[31]}}, instr_instr_o[7], instr_instr_o[30:25],
+    instr_instr_o[11:8], 1'b0
+};
+assign  imm_J           = {
+    {12{instr_instr_o[31]}}, instr_instr_o[19:12], instr_instr_o[20],
+    instr_instr_o[30:21], 1'b0
+};
+assign  imm_U           = {
+    instr_instr_o[31:12], 12'b0
+};
 
 // --------------------------------- FUNCTIONS ---------------------------------
 function automatic [31:0] decoder_3;
