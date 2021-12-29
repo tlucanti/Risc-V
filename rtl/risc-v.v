@@ -329,6 +329,9 @@ wire    [31:0]  mem_data_o;
     output 32bit data read from `mem_addr_i` address
 */
 
+// ------------------------------- MEMORY WIRES --------------------------------
+
+
 // --------------------------------- REGISTER ----------------------------------
 reg     [31:0]  reg_pc;
 /*
@@ -390,6 +393,11 @@ miriscv_ram RAM (
     .mem_we_i       (mem_we_i),           //  1 bit | 1 - write, 0 - read
     .mem_size_i     (mem_size_i),         //  3 bit | return data size
     .mem_data_o     (mem_data_o)          // 31 bit | return data from mem
+);
+
+miriscv_lsu LSU (
+    .clk_i          (CLK),
+    .rst_n_i        ()
 );
 
 // -------------------------------- WIRE ASSIGNS -------------------------------
