@@ -37,11 +37,11 @@ module miriscv_top
   assign data_wdata_ram   =  data_wdata_core;
 
   miriscv_core core (
-    .clk_i   ( clk_i   ),
-    .arstn_i ( rst_n_i ),
+    .CLOCK   ( clk_i   ),
+    .RESET ( rst_n_i ),
 
-    .instr_rdata_i ( instr_rdata_core ),
-    .instr_addr_o  ( instr_addr_core  ),
+    .instr_i ( instr_rdata_core ),
+    .pc  ( instr_addr_core  ),
 
     .data_rdata_i  ( data_rdata_core  ),
     .data_req_o    ( data_req_core    ),

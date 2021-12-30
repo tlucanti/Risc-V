@@ -58,29 +58,29 @@ module miriscv_lsu (
     input   reset,
 
     // core protocol
-    input   [31:0]  lsu_addr_i,
-    input           lsu_we_i,
-    input   [2:0]   lsu_size_i,
-    input   [31:0]  lsu_data_i,
-    input           lsu_req_i,
+    input       [31:0]  lsu_addr_i,
+    input               lsu_we_i,
+    input       [2:0]   lsu_size_i,
+    input       [31:0]  lsu_data_i,
+    input               lsu_req_i,
 
-    output          lsu_busy_o,
-    output reg  [31:0]  lsu_data_o,
+    output              lsu_busy_o,     //
+    output reg  [31:0]  lsu_data_o,     //
 
     // memory protocol
-    input   [31:0]  mem_data_mi,
+    input       [31:0]  mem_data_mi,
     
-    output          mem_req_mo,     //
-    output          mem_we_mo,      //
-    output  [3:0]   mem_mask_mo,
-    output  [31:0]  mem_addr_mo,    //
-    output  [31:0]  mem_data_mo     //
+    output              mem_req_mo,     //
+    output              mem_we_mo,      //
+    output reg  [3:0]   mem_mask_mo,    //
+    output      [31:0]  mem_addr_mo,    //
+    output      [31:0]  mem_data_mo     //
 );
 
-wire    [1:0]   offset;
+wire    [1:0]   offset          = lsu_addr_i[1:0];
+wire    [31:0]  shifted_data    = mem_data_mi >> (offset[1:0] << 3);
 
-assign  offset      = lsu_addr_i[1:0];
-
+assign  lsu_busy_o  = 1'b0;
 assign  mem_req_mo  = lsu_req_i;
 assign  mem_we_mo   = lsu_we_i;
 assign  mem_addr_mo = lsu_addr_i;
@@ -88,13 +88,33 @@ assign  mem_data_mo = lsu_data_i;
 
 always @(*) begin
     case (lsu_size_i)
-        3'd0: begin
-                lsu_data_o <= {
-                    {24{mem_data_mi[30]}},
-                    mem_data_mi[offset << 4 - 1:offset << 3]
-                };
-            end
+        3'b000: lsu_data_o    <= sign_8extend(shifted_data);
+        3'b001: lsu_data_o    <= sign_16extend(shifted_data);
+        3'b010: lsu_data_o    <= mem_data_mi;
+        3'b100: lsu_data_o    <= shifted_data & 'hff;
+        3'b101: lsu_data_o    <= shifted_data & 'hffff;
+    endcase
+
+    case (lsu_size_i)
+        3'b100,
+        3'b000: mem_mask_mo   <= 4'b1  << offset_shift;
+        3'b001,
+        3'b101: mem_mask_mo   <= 4'b11 << offset_shift;
+        3'b010: mem_mask_mo   <= offset_shift;
     endcase
 end
+
+function [31:0] automatic sign_8extend;
+    input [7:0] val;
+    begin
+        sign_8extend = {{24{val[7]}}, val[7:0]};
+    end
+endfunction
+
+function [31:0] automatic sign_16extend;
+    input [15:0] val;
+    begin
+        sign_16extend = {{16{val[15]}}, val[15:0]};
+    end
 
 endmodule

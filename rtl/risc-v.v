@@ -82,9 +82,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 module risc_5 (
-    input           RESET,
-    input           CLK,
-    input   [7:0]   SW
+    input               RESET,
+    input               CLK,
+
+    input       [31:0]  instr_i,
+    output reg  [31:0]  pc,
+
+    
+
 );
 
 wire            pc_do_branch;
