@@ -13,19 +13,9 @@
 //   sync module
 //   module implements memory load/store interface for RAM module
 // Parameters:
-//   lsu_addr_i - address to write/read from data
-//   lsu_we_i   - read/write switcher 1 - write, 0 - read
-//   lsu_size_i - size of data to write
-//     3'd0: signed byte (8 bit)
-//     3'd1: signed half (16 bit)
-//     3'd2: word (32 bit)
-//     3'd4: unsigned byte (8 bit)
-//     3'd5: unsigned half (16 bit)
-//  lsu_data_i  - data to write by `lsu_addr_i`
-//  lsu_req_i   - memory enable flag
 //
 //  lsu_busy_o  - flag to wait and not update pc if data not ready from RAM
-//  lsu_data_o  - sign extended and aligned data from `mem_data_mi`
+//  lsu_data_o  - sign extended and aligned data from `mem_data_mi` (from RAM)
 //    relation to lsu_size_i and offset (`lsu_addr_i[1:0]`):
 //      3'd0: 1 byte:
 //        data:   00000000|00000000|00000000|00000000
@@ -53,68 +43,161 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-module miriscv_lsu (
-    input   clk,
-    input   reset,
+module miriscv_lsu (clk, reset, lsu_addr_i, lsu_we_i, lsu_size_i, lsu_data_i,
+    lsu_req_i, lsu_busy_o, lsu_data_o, mem_data_mi, mem_req_mo, mem_we_mo,
+    mem_mask_mo, mem_addr_mo, mem_data_mo);
 
-    // core protocol
-    input       [31:0]  lsu_addr_i,
-    input               lsu_we_i,
-    input       [2:0]   lsu_size_i,
-    input       [31:0]  lsu_data_i,
-    input               lsu_req_i,
+// ---------------------------------- LSU I/O ----------------------------------
+input   clk;
+/*
+    input clock signal
+*/
+input   reset;
+/*
+    input reset signal (not inverted)
+*/
 
-    output              lsu_busy_o,     //
-    output reg  [31:0]  lsu_data_o,     //
+// core protocol
+input       [31:0]  lsu_addr_i;
+/*
+    address where `lsu_data_i` (data from register) will be written (if STORE
+    instruction), and where from in RAM data will be read (if LOAD instruction)
 
-    // memory protocol
-    input       [31:0]  mem_data_mi,
-    
-    output              mem_req_mo,     //
-    output              mem_we_mo,      //
-    output reg  [3:0]   mem_mask_mo,    //
-    output      [31:0]  mem_addr_mo,    //
-    output      [31:0]  mem_data_mo     //
-);
+    forwarding to `mem_addr_mo`
+*/
+input               lsu_we_i;
+/*
+    read/write switcher from RAM: 1 - write, 0 - read
 
+    forwarding to `mem_we_mo`
+*/
+input       [2:0]   lsu_size_i;
+/*
+    size of data to write
+      3'd0: signed byte (8 bit)
+      3'd1: signed half (16 bit)
+      3'd2: word (32 bit)
+      3'd4: unsigned byte (8 bit)
+      3'd5: unsigned half (16 bit)
+
+    will be used with offset to set `mem_mask_mo` for RAM
+*/
+input       [31:0]  lsu_data_i;
+/*
+    raw 32 bit data (data from register) that will be cut by RAM and written by
+    `lsu_addr_i` address
+*/
+input               lsu_req_i;
+/*
+    memory enable flag
+
+    forwarding to `mem_req_mo`
+*/
+
+output              lsu_busy_o;
+/*
+    flag to stop programm counter from increasing while data from RAM not yet
+    ready, or data not yet written to RAM
+
+    should br forwarded to pc_enable in `core` module
+*/
+output reg  [31:0]  lsu_data_o;
+/*
+    sign extended and alligned data from `mem_data_mi`
+
+    will be using `lsu_size_i` to cut and sign extend raw `mem_data_mi` data
+    from ram and return it to write to register file
+*/
+
+// memory protocol
+input       [31:0]  mem_data_mi;
+/*
+    raw 32 bit data from RAM read by `lsu_addr_i` address
+*/
+
+output              mem_req_mo;
+/*
+    memory enable flag
+
+    forwarded from `lsu_req_i`
+*/
+output              mem_we_mo;
+/*
+    read/write switcher from RAM: 1 - write, 0 - read
+
+    forwarded from `lsu_we_i`
+*/
+output reg  [3:0]   mem_mask_mo;
+/*
+    binary mask to enable bytes from `mem_data_mo` to be written to
+    `mem_addr_mo` address
+
+    `mem_mask_mo` relation to lsu_size_i and offset (`lsu_addr_i[1:0]`):
+              msb                             lsb
+      data:   00000000|00000000|00000000|00000000
+      offset:     3        2        1        0
+*/
+output      [31:0]  mem_addr_mo;
+/*
+    address to read from, or write to, depending on `mem_we_mo`
+*/
+output reg  [31:0]  mem_data_mo;
+/*
+    cut and sign extended data from `lsu_data_i` to send to RAM
+
+    from this data bytes will written by `mem_addr_mo` address according to
+    `mem_mask_mo` mask
+*/
+
+// =============================================================================
+// -------------------------------- WIRE ASSIGNS -------------------------------
 wire    [1:0]   offset          = lsu_addr_i[1:0];
-wire    [31:0]  shifted_data    = mem_data_mi >> (offset[1:0] << 3);
+wire    [31:0]  x8offset        = offset << 3;
+wire    [31:0]  srl_rdata       = mem_data_mi >> x8offset;
 
 assign  lsu_busy_o  = 1'b0;
 assign  mem_req_mo  = lsu_req_i;
 assign  mem_we_mo   = lsu_we_i;
 assign  mem_addr_mo = lsu_addr_i;
-assign  mem_data_mo = lsu_data_i;
 
+// -------------------------------- MAIN BLOCK ---------------------------------
 always @(*) begin
     case (lsu_size_i)
-        3'b000: lsu_data_o    <= sign_8extend(shifted_data);
-        3'b001: lsu_data_o    <= sign_16extend(shifted_data);
-        3'b010: lsu_data_o    <= mem_data_mi;
-        3'b100: lsu_data_o    <= shifted_data & 'hff;
-        3'b101: lsu_data_o    <= shifted_data & 'hffff;
+        3'b000: lsu_data_o    <= sign_8extend(srl_rdata);
+        3'b001: lsu_data_o    <= sign_16extend(srl_rdata);
+        3'b010: lsu_data_o    <= srl_rdata;
+        3'b100: lsu_data_o    <= srl_rdata & 'hff;
+        3'b101: lsu_data_o    <= srl_rdata & 'hffff;
     endcase
 
     case (lsu_size_i)
         3'b100,
-        3'b000: mem_mask_mo   <= 4'b1  << offset_shift;
+        3'b000: mem_mask_mo   <= 4'b1  << x8offset;
         3'b001,
-        3'b101: mem_mask_mo   <= 4'b11 << offset_shift;
-        3'b010: mem_mask_mo   <= offset_shift;
+        3'b101: mem_mask_mo   <= 4'b11 << x8offset;
+        3'b010: mem_mask_mo   <= x8offset;
+    endcase
+
+    case (lsu_size_i)
+        3'b000: mem_data_mo   <= {4{lsu_data_i[7:0]}};
+        3'b001: mem_data_mo   <= {2{lsu_data_i[15:0]}};
+        3'b010: mem_data_mo   <= lsu_data_i;
     endcase
 end
 
-function [31:0] automatic sign_8extend;
+// --------------------------------- FUNCTIONS ---------------------------------
+function automatic [31:0] sign_8extend;
     input [7:0] val;
     begin
         sign_8extend = {{24{val[7]}}, val[7:0]};
     end
 endfunction
 
-function [31:0] automatic sign_16extend;
+function automatic [31:0] sign_16extend;
     input [15:0] val;
     begin
         sign_16extend = {{16{val[15]}}, val[15:0]};
     end
+endfunction
 
 endmodule

@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 
+`ifdef TB_MIRISCV_ALU
 `define ALU_OP_WIDTH 7
 `define ALU_ADD 6'b011000
 `define ALU_SUB 6'b011001
@@ -15,6 +16,7 @@
 `define ALU_GEU 6'b001011
 `define ALU_EQ  6'b001100
 `define ALU_NE  6'b001101
+`endif
 
 module tb_miriscv_alu();	
 	reg [6:0]   operation;

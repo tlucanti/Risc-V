@@ -34,7 +34,7 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-module miriscv_ram (
+module miriscv_ram_my (
     input           clk,
     input           reset,
     input   [31:0]  mem_addr_i,
@@ -59,8 +59,8 @@ function automatic [31:0] get_mem;
 
     begin
         case (mem_size)
-            3'd0: get_mem = $signed(RAM[mem_addr][7:0]);
-            3'd1: get_mem = $signed(RAM[mem_addr][15:0]);
+            3'd0: get_mem = sign_8extend(RAM[mem_addr][7:0]);
+            3'd1: get_mem = sign_16extend(RAM[mem_addr][15:0]);
             3'd2: get_mem = RAM[mem_addr];
             3'd4: get_mem = RAM[mem_addr][7:0];
             3'd5: get_mem = RAM[mem_addr][15:0];
@@ -82,5 +82,19 @@ always @(posedge clk or posedge reset) begin
         end
     end
 end
+
+function automatic [31:0] sign_8extend;
+    input [7:0] val;
+    begin
+        sign_8extend = {{24{val[7]}}, val[7:0]};
+    end
+endfunction
+
+function automatic [31:0] sign_16extend;
+    input [15:0] val;
+    begin
+        sign_16extend = {{16{val[15]}}, val[15:0]};
+    end
+endfunction
 
 endmodule

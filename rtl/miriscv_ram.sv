@@ -24,16 +24,16 @@ module miriscv_ram
   reg [31:0]    mem [0:RAM_SIZE/4-1];
   reg [31:0]    data_int;
 
-  //Init RAM
-  integer ram_index;
+  // //Init RAM
+  // integer ram_index;
 
-  initial begin
-    if(RAM_INIT_FILE != "")
-      $readmemh(RAM_INIT_FILE, mem);
-    else
-      for (ram_index = 0; ram_index < RAM_SIZE/4-1; ram_index = ram_index + 1)
-        mem[ram_index] = {32{1'b0}};
-  end
+  // initial begin
+  //   if(RAM_INIT_FILE != "")
+  //     $readmemh(RAM_INIT_FILE, mem);
+  //   else
+  //     for (ram_index = 0; ram_index < RAM_SIZE/4-1; ram_index = ram_index + 1)
+  //       mem[ram_index] = {32{1'b0}};
+  // end
 
 
   //Instruction port
@@ -42,6 +42,7 @@ module miriscv_ram
   always@(posedge clk_i) begin
     if(!rst_n_i) begin
       data_rdata_o  <= 32'b0;
+      $readmemh("../../../../../rtl/ram.bin", mem);
     end
     else if(data_req_i) begin
       data_rdata_o <= mem[(data_addr_i / 4) % RAM_SIZE];

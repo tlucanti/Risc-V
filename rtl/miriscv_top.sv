@@ -36,19 +36,19 @@ module miriscv_top
   assign data_addr_ram    =  data_addr_core;
   assign data_wdata_ram   =  data_wdata_core;
 
-  miriscv_core core (
-    .CLOCK   ( clk_i   ),
-    .RESET ( rst_n_i ),
+  core rv_core (
+    .CLK            ( clk_i   ),
+    .RESET          ( !rst_n_i ),
 
-    .instr_i ( instr_rdata_core ),
-    .pc  ( instr_addr_core  ),
+    .raw_instr_mi   ( instr_rdata_core ),
+    .core_mem_pc_mo ( instr_addr_core  ),
 
-    .data_rdata_i  ( data_rdata_core  ),
-    .data_req_o    ( data_req_core    ),
-    .data_we_o     ( data_we_core     ),
-    .data_be_o     ( data_be_core     ),
-    .data_addr_o   ( data_addr_core   ),
-    .data_wdata_o  ( data_wdata_core  )
+    .mem_lsu_data_mi( data_rdata_core  ),
+    .lsu_mem_req_mo ( data_req_core    ),
+    .lsu_mem_we_mo  ( data_we_core     ),
+    .lsu_mem_mask_mo( data_be_core     ),
+    .lsu_mem_addr_mo( data_addr_core   ),
+    .lsu_mem_data_mo( data_wdata_core  )
   );
 
   miriscv_ram
@@ -56,8 +56,8 @@ module miriscv_top
     .RAM_SIZE      (RAM_SIZE),
     .RAM_INIT_FILE (RAM_INIT_FILE)
   ) ram (
-    .clk_i   ( clk_i   ),
-    .rst_n_i ( rst_n_i ),
+    .clk_i         ( clk_i   ),
+    .rst_n_i       ( rst_n_i ),
 
     .instr_rdata_o ( instr_rdata_core ),
     .instr_addr_i  ( instr_addr_core  ),
