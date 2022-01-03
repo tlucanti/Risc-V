@@ -45,7 +45,7 @@
 
 module miriscv_decode
 (
-   input    [31:0]                   fetched_instr_i,
+   input        [31:0]               fetched_instr_i,
    output reg   [1:0]                ex_op_a_sel_o,
    output reg   [2:0]                ex_op_b_sel_o,
    output reg   [`ALU_OP_WIDTH-1:0]  alu_op_o,

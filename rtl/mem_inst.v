@@ -28,19 +28,20 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 module mem_inst (
-	input						rst,
-	input						clk,
-	input			[31:0]	pc,
-	output		[31:0]	instr
+   input                rst,
+   input                clk,
+   input       [31:0]   pc,
+   output      [31:0]   instr
 );
 
-reg	[31:0]	RAM	[255:0];
+reg   [31:0]   RAM   [31:0];
+
 always @(posedge clk or posedge rst) begin
-	if (rst) begin
-		$readmemb("../../../../../rtl/prog.bin", RAM);
-	end
+   if (rst) begin
+      $readmemh("../../../../../rtl/prog.bin", RAM);
+   end
 end
 
-assign instr = RAM[pc];
+assign instr = RAM[pc >> 2];
 
 endmodule

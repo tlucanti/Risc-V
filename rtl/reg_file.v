@@ -44,7 +44,7 @@ module reg_file (
 	output 		[31:0]	rd2
 );
 
-reg	[31 : 0]	REG	[0:16];
+reg	[31 : 0]	REG	[0:31];
 
 assign rd1 = REG[ra1];
 assign rd2 = REG[ra2];

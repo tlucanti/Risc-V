@@ -2,7 +2,7 @@
 # @Author: kostya
 # @Date:   2021-12-04 21:23:40
 # @Last Modified by:   kostya
-# @Last Modified time: 2021-12-07 14:30:50
+# @Last Modified time: 2021-12-25 18:04:06
 
 import sys
 
@@ -53,8 +53,7 @@ class Instruction(object):
 		ADD_OPCODE, SUB_OPCODE, XOR_OPCODE, \
 		OR_OPCODE, AND_OPCODE, SLL_OPCODE, \
 		SRL_OPCODE, SRA_OPCODE, SLT_OPCODE, \
-		SLTIU_OPCODE, SLLI_OPCODE, SRLI_OPCODE, \
-		SRAI_OPCODE \
+	 	\
 	}
 	I_OPCODE = {
 		ADDI_OPCODE, XORI_OPCODE, ORI_OPCODE, \
@@ -120,14 +119,14 @@ class Instruction(object):
 			self.imm_bin = self.instr_bin[25:32][::-1]
 			self.imm = int(self.imm_bin, 2)
 		if self.type in 'B':
-			self.imm_bin = self.instr_bin[32] + self.instr_bin[7] \
+			self.imm_bin = self.instr_bin[31] + self.instr_bin[7] \
 			+ self.instr_bin[25:31][::-1] + self.instr_bin[8:12][::-1] + '0'
 			self.imm = int(self.imm_bin, 2)
 		if self.type in 'U':
 			self.imm_bin = self.instr_bin[12:32][::-1] + '0' * 11
 			self.imm = int(self.imm_bin, 2)
 		if self.type in 'J':
-			self.imm_bin = self.instr_bin[32] + self.instr_bin[12:20][::-1] + \
+			self.imm_bin = self.instr_bin[31] + self.instr_bin[12:20][::-1] + \
 			self.instr_bin[20] + self.instr_bin[21:31][::-1] + '0'
 			self.imm = int(self.imm_bin, 2)
 
@@ -289,7 +288,7 @@ class Instruction(object):
 		if self.type in 'RISB':
 			ans += 'rs1   : 0x{rs1:02x} = {rs1:05b} = {rs1}\n'.format(rs1=self.rs1)
 		if self.type in 'RISB':
-			ans += 'funct3: 0x{f3:01x} = {f3:03b} = {f3}\n'.format(f3=self.funct3)
+			ans += 'funct3: 0x{f3:01x}  = {f3:03b} = {f3}\n'.format(f3=self.funct3)
 		if self.type in 'RIUJ':
 			ans += 'rd    : 0x{rd:02x} = {rd:05b} = {rd}\n'.format(rd=self.rd)
 		if self.type in 'IS':
@@ -307,10 +306,14 @@ class Instruction(object):
 instr_arr = []
 argv = sys.argv[1:]
 for instr in argv:
+	if instr.startswith('0b'):
+		instr = hex(int(instsr, 2))[2:]
 	print(f'parsing instruction {instr}')
 	print(Instruction(int(instr, 16)))
 	print()
 for instr in instr_arr:
+	if instr.startswith('0b'):
+		instr = hex(int(instsr, 2))[2:]
 	print(f'parsing instruction {instr}')
 	print(Instruction(instr))
 	print()
