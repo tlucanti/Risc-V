@@ -29,22 +29,20 @@
 //    │  │  │  │       ┌───────┬───────┬────────────────┐
 //    │  │  │  │       │op-code│op-name│op-visualisation│
 //    │  │  │  │       ├───────┼───────┼────────────────┤
-//    │  │  │  │       │  0000 │ALU_ADD│ x1 = x2  +  x3 │
-//    │  │  │  │       │  0001 │ALU_SUB│ x1 = x2  -  x3 │
-//    │  │  │  │       │  0010 │ALU_XOR│ x1 = x2  ^  x3 │
-//    │  │  │  │       │  0011 │ALU_OR │ x1 = x2  |  x3 │
-//    │  │  │  │       │  0100 │ALU_AND│ x1 = x2  &  x3 │
-//    │  │  │  │       │  0101 │ALU_SRA│ x1 = x2 >>> x3 │ (SIGNED OPERATION)
-//    │  │  │  │       │  0110 │ALU_SRL│ x1 = x2 >>  x3 │
-//    │  │  │  │       │  0111 │ALU_SLL│ x1 = x2 <<  x3 │
-//    │  │  │  │       │  1000 │ALU_LTS│ x1 = x2  <  x3 │ (SIGNED OPERATION)
-//    │  │  │  │       │  1001 │ALU_LTU│ x1 = x2  <  x3 │
-//    │  │  │  │       │  1010 │ALU_GES│ x1 = x2 >=  x  │ (SIGNED OPERATION)
-//    │  │  │  │       │  1011 │ALU_GEU│ x1 = x2 >=  x  │
-//    │  │  │  │       │  1100 │ALU_EQ │ x1 = x2 ==  x  │
-//    │  │  │  │       │  1101 │ALU_NE │ x1 = x2 !=  x  │
-//    │  │  │  │       │  1110 │ /--/  │  /----------/  │
-//    │  │  │  │       │  1111 │ /--/  │  /----------/  │
+//    │  │  │  │       │ 00000 │ALU_ADD│ x1 = x2  +  x3 │
+//    │  │  │  │       │ 01000 │ALU_SUB│ x1 = x2  -  x3 │
+//    │  │  │  │       │ 00100 │ALU_XOR│ x1 = x2  ^  x3 │
+//    │  │  │  │       │ 00110 │ALU_OR │ x1 = x2  |  x3 │
+//    │  │  │  │       │ 00111 │ALU_AND│ x1 = x2  &  x3 │
+//    │  │  │  │       │ 01101 │ALU_SRA│ x1 = x2 >>> x3 │ (SIGNED OPERATION)
+//    │  │  │  │       │ 00101 │ALU_SRL│ x1 = x2 >>  x3 │
+//    │  │  │  │       │ 00001 │ALU_SLL│ x1 = x2 <<  x3 │
+//    │  │  │  │       │ 11100 │ALU_LTS│ x1 = x2  <  x3 │ (SIGNED OPERATION)
+//    │  │  │  │       │ 11110 │ALU_LTU│ x1 = x2  <  x3 │
+//    │  │  │  │       │ 11101 │ALU_GES│ x1 = x2 >=  x  │ (SIGNED OPERATION)
+//    │  │  │  │       │ 11111 │ALU_GEU│ x1 = x2 >=  x  │
+//    │  │  │  │       │ 11000 │ALU_EQ │ x1 = x2 ==  x  │
+//    │  │  │  │       │ 11001 │ALU_NE │ x1 = x2 !=  x  │
 //    │  │  │  │       └───────┴───────┴────────────────┘
 //    │  │  │  └─ [WS] data source for writing to a register file:
 //    │  │  │     ┌────┬─────────────────────────┐
@@ -66,8 +64,6 @@
 // Additional Comments:
 // 
 ////////////////////////////////////////////////////////////////////////////////
-
-
 
 module risk_5 (
 	input			rst,
