@@ -120,7 +120,7 @@ output              lsu_mem_we_mo;
 /*
     [memory interface] memory read/write switch 1 - write, 0 - read
 */
-output              lsu_mem_mask_mo;
+output      [3:0]   lsu_mem_mask_mo;
 /*
     [memory interface] memory write mask to chose bytes from `lsu_mem_data_mo`
     to be written
@@ -455,7 +455,6 @@ assign  lsu_data_i      = rf_rd2_o;
 assign  lsu_req_i       = dcode_mem_req_o;
 assign  lsu_we_i        = dcode_mem_we_o;
 assign  lsu_size_i      = dcode_mem_size_o;
-assign  lsu_mem_data_mo = lsu_data_o;
 
 assign  core_mem_pc_mo  = reg_pc;
 

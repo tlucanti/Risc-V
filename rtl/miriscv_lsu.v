@@ -74,11 +74,11 @@ input               lsu_we_i;
 input       [2:0]   lsu_size_i;
 /*
     size of data to write
-      3'd0: signed byte (8 bit)
-      3'd1: signed half (16 bit)
-      3'd2: word (32 bit)
-      3'd4: unsigned byte (8 bit)
-      3'd5: unsigned half (16 bit)
+      3'd0 (0b000): signed byte (8 bit)
+      3'd1 (0b001): signed half (16 bit)
+      3'd2 (0b010): word (32 bit)
+      3'd4 (0b100): unsigned byte (8 bit)
+      3'd5 (0b101): unsigned half (16 bit)
 
     will be used with offset to set `mem_mask_mo` for RAM
 */
@@ -172,10 +172,10 @@ always @(*) begin
 
     case (lsu_size_i)
         3'b100,
-        3'b000: mem_mask_mo   <= 4'b1  << x8offset;
+        3'b000: mem_mask_mo   <= 4'b1  << offset;
         3'b001,
-        3'b101: mem_mask_mo   <= 4'b11 << x8offset;
-        3'b010: mem_mask_mo   <= x8offset;
+        3'b101: mem_mask_mo   <= 4'b11 << offset;
+        3'b010: mem_mask_mo   <= 4'b1111;
     endcase
 
     case (lsu_size_i)
