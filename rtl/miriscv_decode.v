@@ -24,11 +24,12 @@
 // Dependencies:
 //   miriscv_defines
 // 
-// Revision: v1.1
+// Revision: v2.0
 //  - v0.1 - file Created
 //  - v1.0 - done for stage-3, single tact RISC-V i32 microarchitecture, case
 //           slow realization
 //  - v1.1 - remastered comments and I/O
+//  - v2.0 - interrupt handler added
 //
 // Additional Comments:
 // 
@@ -36,14 +37,24 @@
 
 `include "miriscv_defines.v"
 
-module miriscv_decode (fetched_instr_i, ex_op_a_sel_o, ex_op_b_sel_o, alu_op_o,
-   mem_req_o, mem_we_o, mem_size_o, gpr_we_a_o, wb_src_sel_o, illegal_instr_o,
-   branch_o, jal_o, jalr_o);
+module miriscv_decode (fetched_instr_i, int_i, int_rst_o, ex_op_a_sel_o,
+   ex_op_b_sel_o, alu_op_o, mem_req_o, mem_we_o, mem_size_o, gpr_we_a_o,
+   wb_src_sel_o, illegal_instr_o, branch_o, jal_o, jalr_o, csr_sel_o,
+   csr_opcode_o);
 
 // -------------------------------- DECODER I/O --------------------------------
 input        [31:0]               fetched_instr_i;
 /*
    32 bit raw instruction to decode
+*/
+input                             int_i;
+/*
+   interruption flag
+*/
+
+output reg                        int_rst_o;
+/*
+   interrupt handling done
 */
 output reg   [1:0]                ex_op_a_sel_o;
 /*
@@ -94,15 +105,26 @@ output reg                        jal_o;
 /*
    jump and link operation signal
 */
-output reg                        jalr_o;
+output reg  [1:0]                 jalr_o;
 /*
    jump and link registry operation signal
+*/
+output reg                        csr_sel_o;
+/*
+   data path or csr output select driving signal
+*/
+output reg  [2:0]                 csr_opcode_o;
+/*
+   opcode for csr module
 */
 
 // ---------------------------- SUPPLEMENTARY WIRES ----------------------------
 wire     [4:0] op_code  = fetched_instr_i[6:2];
 wire     [2:0] funct3   = fetched_instr_i[14:12];
 wire     [6:0] funct7   = fetched_instr_i[31:25];
+wire           ecall    = fetched_instr_i == 32'h73;
+
+assign   csr_opcode_o[1]= ecall || int_i; // maybe infinit recursion here
 
 // =============================================================================
 // -------------------------------- MAIN BLOCK ---------------------------------
@@ -119,7 +141,12 @@ always @(*) begin
    branch_o          <= 0;
    jal_o             <= 0;
    jalr_o            <= 0;
-   if (fetched_instr_i[1:0] != 2'b11) begin
+   csr_sel_o         <= 0;
+   csr_opcode_o[1:0] <= 0;
+
+   if (csr_opcode_o[1]) begin
+      jalr_o         <= 2'd3;
+   end else if (fetched_instr_i[1:0] != 2'b11) begin
       illegal_instr_o <= 1'b1;
    end else begin
    case (op_code)
@@ -134,7 +161,7 @@ always @(*) begin
             wb_src_sel_o   <= 1'd0;
             branch_o       <= 1'd0;
             jal_o          <= 1'd0;
-            jalr_o         <= 1'd0;
+            jalr_o         <= 2'd0;
             alu_op_o       <= 0;
             case (funct3)
                3'b000:                                                          // ADD SUB
@@ -220,7 +247,7 @@ always @(*) begin
             wb_src_sel_o   <= 1'd0;
             branch_o       <= 1'd0;
             jal_o          <= 1'd0;
-            jalr_o         <= 1'd0;
+            jalr_o         <= 2'd0;
             alu_op_o       <= 0;
             case (funct3)
                3'b000: alu_op_o             <= `ALU_ADD;                        // ADDI
@@ -264,7 +291,7 @@ always @(*) begin
             illegal_instr_o   <= 1'd0;
             branch_o          <= 1'd0;
             jal_o             <= 1'd0;
-            jalr_o            <= 1'd0;
+            jalr_o            <= 2'd0;
          end
       `LOAD_OPCODE:                                                             // LB LH LW LBU LHU
          begin
@@ -276,7 +303,7 @@ always @(*) begin
             wb_src_sel_o   <= 1'd1;
             branch_o       <= 1'd0;
             jal_o          <= 1'd0;
-            jalr_o         <= 1'd0;
+            jalr_o         <= 2'd0;
             case (funct3)
                3'b000,                                                          // LB
                3'b001,                                                          // LH
@@ -301,7 +328,7 @@ always @(*) begin
             wb_src_sel_o   <= 1'd1;
             branch_o       <= 1'd0;
             jal_o          <= 1'd0;
-            jalr_o         <= 1'd0;
+            jalr_o         <= 2'd0;
             case (funct3)
                3'b000,                                                          // SB
                3'b001,                                                          // SH
@@ -325,7 +352,7 @@ always @(*) begin
             wb_src_sel_o      <= 0;
             branch_o          <= 1'd1;
             jal_o             <= 1'd0;
-            jalr_o            <= 1'd0;
+            jalr_o            <= 2'd0;
             case (funct3)
                3'b000: alu_op_o   <= `ALU_EQ;                                   // BEQ
                3'b001: alu_op_o   <= `ALU_NE;                                   // BNE
@@ -350,7 +377,7 @@ always @(*) begin
             illegal_instr_o      <= 0;
             branch_o             <= 1'd0;
             jal_o                <= 1'd1;
-            jalr_o               <= 1'd0;
+            jalr_o               <= 2'd0;
          end
       `JALR_OPCODE:                                                             // JALR
          begin
@@ -366,7 +393,7 @@ always @(*) begin
                illegal_instr_o   <= 0;
                branch_o          <= 1'd0;
                jal_o             <= 1'd0;
-               jalr_o            <= 1'd1;
+               jalr_o            <= 2'd1;
             end else begin
                illegal_instr_o   <= 1'b1;
             end
@@ -384,7 +411,7 @@ always @(*) begin
             illegal_instr_o      <= 0;
             branch_o             <= 1'd0;
             jal_o                <= 1'd0;
-            jalr_o               <= 1'd0;
+            jalr_o               <= 2'd0;
          end
       `FENCE_OPCODE:                                                            // FENCE (NOP)
          begin
@@ -392,15 +419,25 @@ always @(*) begin
                // illegal_instr_o   <= 1'd1;                                    // tester says - NO
             // end
          end
-      `SYSTEM_OPCODE:                                                           // ECALL (NOP) EBREAK (NOP)
+      `SYSTEM_OPCODE:                                                           // MRET CSRRW CSRRS CSRRC ECALL
          begin
-            // casez (fetched_instr_i[31:7])
-               // 'b00000000000?_00000_000_00000:
-                  // begin
-                  // end
-               // default:                                                      // should be ILL, but tester says - NO
-                     // illegal_instr_o   <= 1'b1;
-            // endcase
+            case (fetched_instr_i[31:7])
+               24'h2000:// func7 == 1                                           // ECALL
+               25'h0:   // func3 == 000                                         // MRET
+                  begin
+                     jalr_o         <= 2'd2;
+                     int_rst_o      <= 1'd1;
+                  end
+               25'h20,  // func3 == 001                                         // CSRRW
+               25'h40,  // func3 == 010                                         // CSRRS
+               25'h60:  // func3 == 011                                         // CSRRC
+                  begin
+                     csr_sel_o   <= 1'd1;
+                     csr_opcode_o<= funct3[1:0];
+                  end
+               default:
+                  illegal_instr_o <= 1'b1;
+            endcase
          end
       default:
             illegal_instr_o <= 1'b1;

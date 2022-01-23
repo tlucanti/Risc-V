@@ -76,9 +76,14 @@
 //   miriscv_decode.v
 //   miriscv_lsu.v
 //   miriscv_regfile.v
+//   miriscv_csr.v
 // 
-// Revision:
-// Revision 0.01 - File Created
+// Revision: v4.0
+//  - v0.1 - file Created
+//  - v1.0 - done for stage-2
+//  - v2.0 - done for stage-4
+//  - v3.0 - done for stage-5
+//  - v4.0 - done for stage-6
 // Additional Comments:
 // 
 ////////////////////////////////////////////////////////////////////////////////
@@ -87,7 +92,7 @@
 
 module core(RESET, CLK, raw_instr_mi, core_mem_pc_mo, mem_lsu_data_mi,
     lsu_mem_req_mo, lsu_mem_we_mo, lsu_mem_mask_mo, lsu_mem_addr_mo,
-    lsu_mem_data_mo);
+    lsu_mem_data_mo, int_i, dcode_int_rst_o, int_csr_mcause_i, csr_int_mie_o);
 
 // --------------------------------- CORE I/O ----------------------------------
 input               RESET;
@@ -132,6 +137,23 @@ output      [31:0]  lsu_mem_addr_mo;
 output      [31:0]  lsu_mem_data_mo;
 /*
     data from lsu to write to RAM by `lsu_mem_data_mo` address
+*/
+
+input               int_i;
+/*
+
+*/
+output              dcode_int_rst_o;
+/*
+
+*/
+input      [31:0]   int_csr_mcause_i;         
+/*
+
+*/
+output      [31:0]  csr_int_mie_o;
+/*
+
 */
 
 // ---------------------------- SUPPLEMENTARY WIRES ----------------------------
@@ -252,7 +274,15 @@ wire    [31:0]  dcode_isntr_i;
     32 bit raw RISC-V i32 instruction to decode in main decoder, one of
     6 types: R-TYPE, I-TYPE, S-TYPE, B-TYPE, U-TYPE, J-TYPE
 */
+wire            dcode_int_i;
+/*
 
+*/
+
+wire            dcode_int_rst_o;
+/*
+
+*/
 wire    [1:0]   dcode_alu_op1_sel_o;
 /*
     driving signal for alu first (left) operand `alu_op1_i`, one of:
@@ -326,9 +356,21 @@ wire            jal_o;
 /*
     flag that current operation is J-TYPE (`jal` instruction)
 */
-wire            jalr_o;
+wire   [1:0]    jalr_o;
 /*
     flag that current instruction is `jalr`
+*/
+wire            dcode_csr_sel_o;
+/*
+
+*/
+wire     [2:0]  dcode_csr_opcode_o;
+/*
+
+*/
+wire    [31:0]  csr_mcause_i;
+/*
+
 */
 
 // --------------------------------- LSU WIRES ---------------------------------
@@ -364,6 +406,40 @@ wire    [31:0]  lsu_data_o;
     output 32bit data read from `mem_addr_i` address
 */
 
+// --------------------------------- CSR WIRES ---------------------------------
+wire    [2:0]  csr_opcode_i;
+/*
+
+*/
+wire    [31:0] csr_mcause_i;
+/*
+
+*/
+wire    [11:0]  csr_address_i;
+/*
+
+*/
+wire    [31:0]  csr_write_data_i;
+/*
+
+*/
+wire    [31:0]  csr_mie_o;
+/*
+
+*/
+wire    [31:0]  csr_mtvec_o;
+/*
+
+*/
+wire    [31:0]  csr_mepc_o;
+/*
+
+*/
+wire    [31:0]  csr_read_data_o;
+/*
+
+*/
+
 // --------------------------------- REGISTER ----------------------------------
 reg     [31:0]  reg_pc;
 /*
@@ -395,6 +471,8 @@ reg_file REG_FILE (
 
 miriscv_decode MAIN_DECODER (
     .fetched_instr_i(dcode_isntr_i      ), // 32 bit | raw instruction
+    .int_i          (dcode_int_i        ), //  1 bit |
+    .int_rst_i      (dcode_int_rst_o    ), //  1 bit |
     .ex_op_a_sel_o  (dcode_alu_op1_sel_o), //  2 bit | sel first alu operand
     .ex_op_b_sel_o  (dcode_alu_op2_sel_o), //  3 bit | sel second alu operand
     .alu_op_o       (dcode_alu_opode_o  ), //  4 bit | alu opcode
@@ -406,26 +484,42 @@ miriscv_decode MAIN_DECODER (
     .illegal_instr_o(illegal_instr_o    ), //  1 bit | illegal instruction flag
     .branch_o       (branch_o           ), //  1 bit | branch operation flag
     .jal_o          (jal_o              ), //  1 bit | `jal` instruction flag
-    .jalr_o         (jalr_o             )  //  1 bit | `jalr` instruction flag
+    .jalr_o         (jalr_o             ), //  2 bit | `jalr` instruction flag
+    .csr_sel_o      (dcode_csr_sel_o    ), //  1 bit |
+    .csr_opcode_o   (dcode_csr_opcode_o )  //  2 bit |
 );
 
 miriscv_lsu LSU (
-    .clk            (CLK),
-    .reset          (RESET),
-    .lsu_addr_i     (lsu_addr_i),
-    .lsu_we_i       (lsu_we_i),
-    .lsu_size_i     (lsu_size_i),
-    .lsu_data_i     (lsu_data_i),
-    .lsu_req_i      (lsu_req_i),
-    .lsu_busy_o     (),
-    .lsu_data_o     (lsu_data_o),
-    .mem_data_mi    (mem_lsu_data_mi),
-    .mem_req_mo     (lsu_mem_req_mo),
-    .mem_we_mo      (lsu_mem_we_mo),
-    .mem_mask_mo    (lsu_mem_mask_mo),
-    .mem_addr_mo    (lsu_mem_addr_mo),
-    .mem_data_mo    (lsu_mem_data_mo)
-); 
+    .clk            (CLK                ),
+    .reset          (RESET              ),
+    .lsu_addr_i     (lsu_addr_i         ),
+    .lsu_we_i       (lsu_we_i           ),
+    .lsu_size_i     (lsu_size_i         ),
+    .lsu_data_i     (lsu_data_i         ),
+    .lsu_req_i      (lsu_req_i          ),
+    .lsu_busy_o     (                   ),
+    .lsu_data_o     (lsu_data_o         ),
+    .mem_data_mi    (mem_lsu_data_mi    ),
+    .mem_req_mo     (lsu_mem_req_mo     ),
+    .mem_we_mo      (lsu_mem_we_mo      ),
+    .mem_mask_mo    (lsu_mem_mask_mo    ),
+    .mem_addr_mo    (lsu_mem_addr_mo    ),
+    .mem_data_mo    (lsu_mem_data_mo    )
+);
+
+miriscv_csr CSR (
+    .clk             (CLK),
+    .reset           (RESET),
+    .csr_opcode_i    (csr_opcode_i),
+    .csr_mcause_i    (csr_mcause_i),
+    .csr_pc_i        (reg_pc),
+    .csr_address_i   (csr_address_i),
+    .csr_write_data_i(csr_write_data_i),
+    .csr_mie_o       (csr_mie_o),
+    .csr_mtvec_o     (csr_mtvec_o),
+    .csr_mepc_o      (csr_mepc_o),
+    .csr_read_data_o (csr_read_data_o)
+)
 
 // -------------------------------- WIRE ASSIGNS -------------------------------
 assign  alu_op1_i       = decoder_3 (
@@ -447,7 +541,7 @@ assign alu_opcode_i     = dcode_alu_opode_o;
 assign  rf_ra1_i        = raw_instr_mi[19:15];
 assign  rf_ra2_i        = raw_instr_mi[24:20];
 assign  rf_wa_i         = raw_instr_mi[11:7];
-assign  rf_wd_i         = dcode_rf_wd_sel_o ? lsu_data_o : alu_sol_o;
+assign  rf_wd_i         = reg_file_ws(dcode_rf_wd_sel_o, csr_sel_o);
 assign  rf_we_i         = dcode_rf_we_o;
 
 assign  lsu_addr_i      = alu_sol_o;
@@ -459,6 +553,13 @@ assign  lsu_size_i      = dcode_mem_size_o;
 assign  core_mem_pc_mo  = reg_pc;
 
 assign  dcode_isntr_i   = raw_instr_mi;
+assign  dcode_int_i     = int_i;
+
+assign  csr_opcode_i    = dcode_csr_opcode_o;
+assign  csr_mcause_i    = int_csr_mcause_i;
+assign  csr_address_i   = raw_instr_mi[31:20];
+assign  csr_write_data_i= rf_rd2_o;
+assign  csr_int_mie_o   = csr_mie_o;
 
 assign  pc_do_branch    = jal_o || (alu_flag_o && branch_o);
 
@@ -479,6 +580,30 @@ assign  imm_J           = {
 assign  imm_U           = {
     raw_instr_mi[31:12], 12'b0
 };
+
+// -------------------------------- MAIN BLOCK ---------------------------------
+always @(posedge CLK) begin
+    if (RESET) begin
+        reg_pc <= 32'b0;
+    end
+    else begin
+        case (jalr_o)
+            2'd0:
+                begin
+                    if (pc_do_branch) begin
+                        reg_pc <= reg_pc + (branch_o ? imm_B : imm_J);
+                    end else begin
+                        reg_pc <= reg_pc + 31'd4;
+                    end
+                end
+            2'd1: reg_pc <= rf_rd1_o + (imm_I << 2);
+            2'd2: reg_pc <= csr_mepc_o;
+            2'd3: reg_pc <= csr_mtvec_o;
+        endcase
+    end
+end
+
+endmodule
 
 // --------------------------------- FUNCTIONS ---------------------------------
 function automatic [31:0] decoder_3;
@@ -523,21 +648,20 @@ function automatic [31:0] decoder_5;
     end
 endfunction
 
-always @(posedge CLK) begin
-    if (RESET) begin
-        reg_pc <= 32'b0;
-    end
-    else begin
-        if (jalr_o) begin
-            reg_pc <= rf_rd1_o + (imm_I << 2);
-        end else begin
-            if (pc_do_branch) begin
-                reg_pc <= reg_pc + (branch_o ? imm_B : imm_J);
-            end else begin
-                reg_pc <= reg_pc + 31'd4;
-            end
+function automatic [31:0] reg_file_ws;
+/*
+
+*/
+    input   ws;
+    input   csr;
+
+    begin
+        if (csr) begin
+            reg_file_ws <= csr_read_data_o;
+        end else if (ws)
+            reg_file_ws <= lsu_data_o;
+        else begin
+            reg_file_ws <= alu_sol_o;
         end
     end
-end
-
-endmodule
+endfunction

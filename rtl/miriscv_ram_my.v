@@ -1,4 +1,11 @@
 `timescale 1ns / 1ps
+
+/* ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
+   
+   DEPRECATED MODULE, IT NOW REPLACED WITH miriscv_lsu MODULE
+
+*/
+
 ////////////////////////////////////////////////////////////////////////////////
 // Company: Miet
 // Engineer: Kostya
@@ -28,8 +35,11 @@
 //     3'd5: unsigned half (16 bit)
 // Dependencies: None
 // 
-// Revision:
-// Revision 0.01 - File Created
+// Revision: deprecated
+//  - v0.1 - file Created
+//  - v1.0 - done for stage-4
+//   ---- - module deprecated and no longer used
+//
 // Additional Comments:
 // 
 ////////////////////////////////////////////////////////////////////////////////

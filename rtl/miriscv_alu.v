@@ -20,9 +20,9 @@
 // 
 // Revision: v1.1
 //   v0.1 - file Created
-//   v0.2 - done for stage-1
-//   v1.0 - remade for RISC-V i32 instruction set
-//   v1.1 - remastered comments and I/O
+//   v1.0 - done for stage-1
+//   v2.0 - remade for RISC-V i32 instruction set
+//   v2.1 - remastered comments and I/O
 //   
 // Additional Comments:
 // 
