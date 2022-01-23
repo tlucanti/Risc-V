@@ -1,6 +1,6 @@
 module miriscv_ram
 #(
-  parameter RAM_SIZE      = 256, // bytes
+  parameter RAM_SIZE      = 128, // bytes
   parameter RAM_INIT_FILE = ""
 )
 (
@@ -21,7 +21,7 @@ module miriscv_ram
   input         [31:0]  data_wdata_i
 );
 
-  reg [31:0]    mem [0:RAM_SIZE/4-1];
+  reg [31:0]    mem [0:RAM_SIZE-1];
 
   // //Init RAM
   // integer ram_index;
@@ -36,8 +36,8 @@ module miriscv_ram
 
 
   //Instruction port
-  assign instr_rdata_o = mem[(instr_addr_i / 4) % RAM_SIZE];
-  assign data_rdata_o  = mem[(data_addr_i / 4) % RAM_SIZE];
+  assign instr_rdata_o = mem[(instr_addr_i / 4)];
+  assign data_rdata_o  = mem[(data_addr_i / 4)];
 
   always@(posedge clk_i) begin
     if(!rst_n_i) begin
