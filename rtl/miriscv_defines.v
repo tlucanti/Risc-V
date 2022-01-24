@@ -1,3 +1,29 @@
+////////////////////////////////////////////////////////////////////////////////
+// Company: Miet
+// Engineer: Kostya
+// 
+// Create Date: 20.11.2021 15:13:33
+// Design Name: RISC-V
+// Project Name: RISC-V
+// Target Devices: any
+// Tool Versions: 2021.2
+// Description:
+//   verilog header
+//   contains defines for miriscv_decode module and other modules to use
+//
+// Dependencies: none
+// 
+// Revision: v1.1
+//  - v1.0 - file Created
+//  - v1.1 - add header
+//
+// Additional Comments:
+// 
+////////////////////////////////////////////////////////////////////////////////
+
+`ifndef MIRISCV_DEFINES
+`define MIRISCV_DEFINES
+
 `define RESET_ADDR 32'h00000000
 
 `define ALU_OP_WIDTH  5
@@ -64,3 +90,5 @@
 // writeback source selection
 `define WB_EX_RESULT     1'b0
 `define WB_LSU_DATA      1'b1
+
+`endif

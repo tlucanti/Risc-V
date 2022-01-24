@@ -1,4 +1,11 @@
 `timescale 1ns / 1ps
+
+/* ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
+   
+   DEPRECATED MODULE, IT NOW REPLACED WITH miriscv_lsu MODULE
+
+*/
+
 ////////////////////////////////////////////////////////////////////////////////
 // Company: Miet
 // Engineer: Kostya
@@ -13,6 +20,7 @@
 //   sync module
 //   Module reads 32 bit instructions from file `prog.s` in hex
 //   format and stores them in 1024 bit readonly RAM
+//
 // Parameters:
 //   rst   - reset signal
 //   clk   - clock signal
@@ -21,8 +29,12 @@
 // 
 // Dependencies: None
 // 
-// Revision:
-// Revision 0.01 - File Created
+// Revision: deprecated
+//   v0.1 - file Created
+//   v0.2 - done for stage-2
+//   v1.0 - remade for RISC-V i32 instruction set
+//   ---- - module deprecated and no longer used
+//
 // Additional Comments:
 // 
 ////////////////////////////////////////////////////////////////////////////////
