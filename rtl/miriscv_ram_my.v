@@ -2,7 +2,7 @@
 
 /* ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
    
-   DEPRECATED MODULE, IT NOW REPLACED WITH miriscv_lsu MODULE
+   DEPRECATED MODULE, IT NOW REPLACED WITH miriscv_ram MODULE
 
 */
 

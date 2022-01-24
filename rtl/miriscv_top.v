@@ -51,7 +51,7 @@ module miriscv_top
 
   wire  [31:0]  core_int_mie;
   wire          core_int_rst;
-  wire          int_core_mcause;
+  wire  [31:0]   int_core_mcause;
   wire          int_core_int;
 
   assign data_rdata_core  = data_rdata_ram;

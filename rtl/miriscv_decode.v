@@ -113,7 +113,7 @@ output reg                        csr_sel_o;
 /*
    data path or csr output select driving signal
 */
-output reg  [2:0]                 csr_opcode_o;
+output      [2:0]                 csr_opcode_o;
 /*
    opcode for csr module
 */
@@ -123,8 +123,10 @@ wire     [4:0] op_code  = fetched_instr_i[6:2];
 wire     [2:0] funct3   = fetched_instr_i[14:12];
 wire     [6:0] funct7   = fetched_instr_i[31:25];
 wire           ecall    = fetched_instr_i == 32'h73;
+wire           op_code_2= ecall || int_i; // maybe infinit recursion here
 
-assign   csr_opcode_o[1]= ecall || int_i; // maybe infinit recursion here
+reg     [1:0] op_code_10;
+assign csr_opcode_o = {op_code_2, op_code_10};
 
 // =============================================================================
 // -------------------------------- MAIN BLOCK ---------------------------------
@@ -142,9 +144,10 @@ always @(*) begin
    jal_o             <= 0;
    jalr_o            <= 0;
    csr_sel_o         <= 0;
-   csr_opcode_o[1:0] <= 0;
+   op_code_10        <= 0;
+   int_rst_o         <= 0;
 
-   if (csr_opcode_o[1]) begin
+   if (op_code_2) begin
       jalr_o         <= 2'd3;
    end else if (fetched_instr_i[1:0] != 2'b11) begin
       illegal_instr_o <= 1'b1;
@@ -423,6 +426,7 @@ always @(*) begin
          begin
             case (fetched_instr_i[31:7])
                24'h2000:// func7 == 1                                           // ECALL
+                  begin end
                25'h0:   // func3 == 000                                         // MRET
                   begin
                      jalr_o         <= 2'd2;
@@ -433,7 +437,7 @@ always @(*) begin
                25'h60:  // func3 == 011                                         // CSRRC
                   begin
                      csr_sel_o   <= 1'd1;
-                     csr_opcode_o<= funct3[1:0];
+                     op_code_10  <= funct3[1:0];
                   end
                default:
                   illegal_instr_o <= 1'b1;

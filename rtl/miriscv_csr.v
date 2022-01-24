@@ -113,30 +113,63 @@ reg     [31:0]  mcause;
 */
 
 // -------------------------------- WIRE ASSIGNS -------------------------------
-assign  csr_mie_o   = mie;
-assign  csr_mtvec_o = mtvec;
-assign  csr_mepc_o  = mepc;
+assign  csr_mie_o       = mie;
+assign  csr_mtvec_o     = mtvec;
+assign  csr_mepc_o      = mepc;
+assign  csr_read_data_o = get_reg(csr_address_i);
 
 // -------------------------------- MAIN BLOCK ---------------------------------
 
-always (posedge clk) begin
-    case (csr_address_i)
-        8'h304: mie      <= do_instr(mie);
-        8'h305: mtvec    <= do_instr(mtvec);
-        8'h340: mscratch <= do_instr(mscratch);
-        8'h341: mepc     <= csr_opcode_i[2] ? csr_pc_i : do_instr(mepc);
-        8'h342: mcause   <= csr_opcode_i[2] ? csr_mcause_i : do_instr(mcause);
-    endcase
+always @(posedge clk) begin
+    if (reset) begin
+        mie         <= ~(32'd0);
+        mtvec       <= 32'd0;
+        mscratch    <= 32'd0;
+        mepc        <= 32'd0;
+        mcause      <= 32'd0;
+    end else begin
+        case (csr_address_i)
+            12'h304: mie      <= do_instr(mie);
+            12'h305: mtvec    <= do_instr(mtvec);
+            12'h340: mscratch <= do_instr(mscratch);
+            12'h341: mepc     <= csr_opcode_i[2] ? csr_pc_i : do_instr(mepc);
+            12'h342: mcause   <=
+                csr_opcode_i[2] ? csr_mcause_i : do_instr(mcause);
+        endcase
+    end
 end
 
 // --------------------------------- FUNCTIONS ---------------------------------
 function automatic [31:0] do_instr;
+/*
+
+*/
     input   [31:0]  reg_val;
+
     begin
         case (csr_mcause_i[1:0])
+            2'd0: do_instr = 32'd0;
             2'd1: do_instr = csr_write_data_i;
             2'd2: do_instr = csr_write_data_i | reg_val;
             2'd3: do_instr = ~csr_write_data_i & reg_val;
+        endcase
+    end
+endfunction
+
+function automatic [31:0] get_reg;
+/*
+
+*/
+    input   [11:0]  address;
+
+    begin
+        case (address)
+            12'h304: get_reg = mie;
+            12'h305: get_reg = mtvec;
+            12'h340: get_reg = mscratch;
+            12'h341: get_reg = mepc;
+            12'h342: get_reg = mcause;
+            default: get_reg = 32'd0;
         endcase
     end
 endfunction

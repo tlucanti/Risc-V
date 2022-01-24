@@ -279,10 +279,6 @@ wire            dcode_int_i;
 
 */
 
-wire            dcode_int_rst_o;
-/*
-
-*/
 wire    [1:0]   dcode_alu_op1_sel_o;
 /*
     driving signal for alu first (left) operand `alu_op1_i`, one of:
@@ -365,10 +361,6 @@ wire            dcode_csr_sel_o;
 
 */
 wire     [2:0]  dcode_csr_opcode_o;
-/*
-
-*/
-wire    [31:0]  csr_mcause_i;
 /*
 
 */
@@ -472,7 +464,7 @@ reg_file REG_FILE (
 miriscv_decode MAIN_DECODER (
     .fetched_instr_i(dcode_isntr_i      ), // 32 bit | raw instruction
     .int_i          (dcode_int_i        ), //  1 bit |
-    .int_rst_i      (dcode_int_rst_o    ), //  1 bit |
+    .int_rst_o      (dcode_int_rst_o    ), //  1 bit |
     .ex_op_a_sel_o  (dcode_alu_op1_sel_o), //  2 bit | sel first alu operand
     .ex_op_b_sel_o  (dcode_alu_op2_sel_o), //  3 bit | sel second alu operand
     .alu_op_o       (dcode_alu_opode_o  ), //  4 bit | alu opcode
@@ -519,7 +511,7 @@ miriscv_csr CSR (
     .csr_mtvec_o     (csr_mtvec_o),
     .csr_mepc_o      (csr_mepc_o),
     .csr_read_data_o (csr_read_data_o)
-)
+);
 
 // -------------------------------- WIRE ASSIGNS -------------------------------
 assign  alu_op1_i       = decoder_3 (
@@ -541,7 +533,9 @@ assign alu_opcode_i     = dcode_alu_opode_o;
 assign  rf_ra1_i        = raw_instr_mi[19:15];
 assign  rf_ra2_i        = raw_instr_mi[24:20];
 assign  rf_wa_i         = raw_instr_mi[11:7];
-assign  rf_wd_i         = reg_file_ws(dcode_rf_wd_sel_o, csr_sel_o);
+assign  rf_wd_i         = dcode_csr_sel_o ? csr_read_data_o :
+    (dcode_rf_wd_sel_o ? lsu_data_o : alu_sol_o);
+//reg_file_ws(dcode_rf_wd_sel_o, dcode_csr_sel_o);
 assign  rf_we_i         = dcode_rf_we_o;
 
 assign  lsu_addr_i      = alu_sol_o;
@@ -603,8 +597,6 @@ always @(posedge CLK) begin
     end
 end
 
-endmodule
-
 // --------------------------------- FUNCTIONS ---------------------------------
 function automatic [31:0] decoder_3;
 /*
@@ -657,11 +649,13 @@ function automatic [31:0] reg_file_ws;
 
     begin
         if (csr) begin
-            reg_file_ws <= csr_read_data_o;
-        end else if (ws)
-            reg_file_ws <= lsu_data_o;
-        else begin
-            reg_file_ws <= alu_sol_o;
+            reg_file_ws = csr_read_data_o;
+        end else if (ws) begin
+            reg_file_ws = lsu_data_o;
+        end else begin
+            reg_file_ws = alu_sol_o;
         end
     end
 endfunction
+
+endmodule

@@ -24,7 +24,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-module interrupt_controller();
+module interrupt_controller(clk, reset, int_int_req_i, int_mie_i, int_rst_i,
+    int_mcause_i, int_int_o);
 
 // ---------------------------------- IC I/O -----------------------------------
 input   clk;
@@ -44,7 +45,7 @@ input   [31:0]  int_mie_i;
 /*
     mask interrupt enable
 */
-input           int_rst_i
+input           int_rst_i;
 /*
     interrupt done flag
 */
@@ -69,8 +70,8 @@ assign          int_mcause_i = cnt;
 
 // -------------------------------- MAIN BLOCK ---------------------------------
 
-always (posedge clk) begin
-    if (reset) begin
+always @(posedge clk) begin
+    if (reset || int_rst_i) begin
         int <= 0;
         cnt <= 0;
     end
@@ -79,3 +80,5 @@ always (posedge clk) begin
     end
     int <= int_accepted;
 end
+
+endmodule
