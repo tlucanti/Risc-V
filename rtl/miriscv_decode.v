@@ -122,7 +122,7 @@ output      [2:0]                 csr_opcode_o;
 wire     [4:0] op_code  = fetched_instr_i[6:2];
 wire     [2:0] funct3   = fetched_instr_i[14:12];
 wire     [6:0] funct7   = fetched_instr_i[31:25];
-wire           ecall    = fetched_instr_i == 32'h73;
+wire           ecall    = fetched_instr_i == 32'h100073;
 wire           op_code_2= ecall || int_i; // maybe infinit recursion here
 
 reg     [1:0] op_code_10;
@@ -424,24 +424,25 @@ always @(*) begin
          end
       `SYSTEM_OPCODE:                                                           // MRET CSRRW CSRRS CSRRC ECALL
          begin
-            case (fetched_instr_i[31:7])
-               24'h2000:// func7 == 1                                           // ECALL
-                  begin end
-               25'h0:   // func3 == 000                                         // MRET
-                  begin
-                     jalr_o         <= 2'd2;
-                     int_rst_o      <= 1'd1;
-                  end
-               25'h20,  // func3 == 001                                         // CSRRW
-               25'h40,  // func3 == 010                                         // CSRRS
-               25'h60:  // func3 == 011                                         // CSRRC
-                  begin
-                     csr_sel_o   <= 1'd1;
-                     op_code_10  <= funct3[1:0];
-                  end
+            if (fetched_instr_i[31:7] == 25'h2000) begin // func7 == 1          // EBREAK
+               jalr_o         <= 2'd3;
+            end else if (fetched_instr_i[31:7] == 25'h0) begin // func3 == 000  // MRET
+               jalr_o         <= 2'd2;
+               int_rst_o      <= 1'd1;
+            end else begin
+               case (funct3) 
+                  3'b001,                                                       // CSRRW
+                  3'b010,                                                       // CSRRS
+                  3'b011:                                                       // CSRRC
+                     begin
+                        csr_sel_o   <= 1'd1;
+                        op_code_10  <= funct3[1:0];
+                        gpr_we_a_o  <= 1'd1;
+                     end
                default:
                   illegal_instr_o <= 1'b1;
-            endcase
+               endcase
+            end
          end
       default:
             illegal_instr_o <= 1'b1;

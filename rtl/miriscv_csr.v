@@ -127,14 +127,16 @@ always @(posedge clk) begin
         mscratch    <= 32'd0;
         mepc        <= 32'd0;
         mcause      <= 32'd0;
-    end else begin
+    end else if (csr_opcode_i[2]) begin
+        mepc        <= csr_pc_i;
+        mcause      <= csr_mcause_i;
+    end else if (csr_opcode_i != 2'd0) begin
         case (csr_address_i)
             12'h304: mie      <= do_instr(mie);
             12'h305: mtvec    <= do_instr(mtvec);
             12'h340: mscratch <= do_instr(mscratch);
-            12'h341: mepc     <= csr_opcode_i[2] ? csr_pc_i : do_instr(mepc);
-            12'h342: mcause   <=
-                csr_opcode_i[2] ? csr_mcause_i : do_instr(mcause);
+            12'h341: mepc     <= do_instr(mepc);
+            12'h342: mcause   <= do_instr(mcause);
         endcase
     end
 end
@@ -147,8 +149,7 @@ function automatic [31:0] do_instr;
     input   [31:0]  reg_val;
 
     begin
-        case (csr_mcause_i[1:0])
-            2'd0: do_instr = 32'd0;
+        case (csr_opcode_i[1:0])
             2'd1: do_instr = csr_write_data_i;
             2'd2: do_instr = csr_write_data_i | reg_val;
             2'd3: do_instr = ~csr_write_data_i & reg_val;

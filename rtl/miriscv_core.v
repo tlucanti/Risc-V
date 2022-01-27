@@ -552,7 +552,7 @@ assign  dcode_int_i     = int_i;
 assign  csr_opcode_i    = dcode_csr_opcode_o;
 assign  csr_mcause_i    = int_csr_mcause_i;
 assign  csr_address_i   = raw_instr_mi[31:20];
-assign  csr_write_data_i= rf_rd2_o;
+assign  csr_write_data_i= rf_rd1_o;
 assign  csr_int_mie_o   = csr_mie_o;
 
 assign  pc_do_branch    = jal_o || (alu_flag_o && branch_o);
