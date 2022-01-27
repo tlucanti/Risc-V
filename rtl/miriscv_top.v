@@ -28,8 +28,7 @@
 module miriscv_top
 (
   input clk_i,
-  input rst_n_i,
-  input [31:0] int_req_i
+  input rst_n_i
 );
 
   wire  [31:0]  instr_rdata_core;
@@ -51,8 +50,10 @@ module miriscv_top
 
   wire  [31:0]  core_int_mie;
   wire          core_int_rst;
-  wire  [31:0]   int_core_mcause;
+  wire  [31:0]  int_core_mcause;
   wire          int_core_int;
+
+  wire  [31:0]  int_req_i;
 
   assign data_rdata_core  = data_rdata_ram;
   assign data_req_ram     = data_req_core;
@@ -91,20 +92,17 @@ module miriscv_top
     .int_int_o       (int_core_int   )
   );
 
-  miriscv_ram ram (
-    .clk_i         (clk_i           ),
-    .rst_n_i       (rst_n_i         ),
-
-    .instr_rdata_o (instr_rdata_core),
-    .instr_addr_i  (instr_addr_core ),
-
-    .data_rdata_o  (data_rdata_ram  ),
-    .data_req_i    (data_req_ram    ),
-    .data_we_i     (data_we_ram     ),
-    .data_be_i     (data_be_ram     ),
-    .data_addr_i   (data_addr_ram   ),
-    .data_wdata_i  (data_wdata_ram  )
+  miriscv_addr_decoder addr_dc (
+    .clk                (clk_i           ),
+    .reset              (!rst_n_i        ),
+    .instr_rdata_core_o (instr_rdata_core),
+    .instr_addr_core_i  (instr_addr_core ),
+    .dev_we_i           (data_we_ram     ),
+    .dev_mask_i         (data_be_ram     ),
+    .dev_addr_i         (data_addr_ram   ),
+    .dev_wr_data_i      (data_wdata_ram  ),
+    .int_rst_i          (core_int_rst    ),
+    .dev_int_o          (int_req_i       )
   );
-
 
 endmodule
