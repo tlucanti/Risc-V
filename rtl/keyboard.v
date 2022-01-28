@@ -81,6 +81,7 @@ always @(posedge clk) begin
     if (reset) begin
         kb_int_o    <= 1'b0;
         cnt         <= 4'd0;
+        pressed     <= 8'd15;
     end else begin
         if (kb_req_i) begin
             if (kb_we_i && reg_mask_i[0]) begin

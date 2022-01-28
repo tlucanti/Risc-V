@@ -23,7 +23,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 module miriscv_addr_decoder(clk, reset, instr_rdata_core_o, instr_addr_core_i,
-    dev_we_i, dev_mask_i, dev_addr_i, dev_wr_data_i, int_rst_i, dev_int_o);
+    dev_we_i, dev_mask_i, dev_addr_i, dev_wr_data_i, int_rst_i, dev_int_o,
+    dev_data_o);
 
 // clock, reset
 input   clk;
@@ -54,7 +55,7 @@ wire    [31:0]  mem_data;
 */
 
 // keyboard
-wire            kb_req_o;
+wire            kb_req;
 /*
     keyboard request flag
 */
@@ -68,7 +69,7 @@ wire            kb_int;
 */
 
 // flash
-wire            fl_req_o;
+wire            fl_req;
 /*
     flash request flag
 */
@@ -97,6 +98,10 @@ input   [31:0]  dev_addr_i;
 input   [31:0]  dev_wr_data_i;
 /*
     write data to write to device register
+*/
+output  [31:0]  dev_data_o;
+/*
+    data from selected device
 */
 
 // interrupt
@@ -141,7 +146,7 @@ keyboard kb (
 flash fl (
     .clk             (clk          ),
     .reset           (reset        ),
-    .fl_req_i        (fl_req_o     ),
+    .fl_req_i        (fl_req       ),
     .fl_we_i         (dev_we_i     ),
     .reg_addr_i      (dev_addr_i - 32'h84),
     .reg_wdata_i     (dev_wr_data_i),
@@ -151,8 +156,38 @@ flash fl (
     .fl_int_rst_i    (int_rst_i    )
 );
 
+assign mem_req      = dev_addr_i < 32'h80;
 assign kb_req       = dev_addr_i == 32'h80;
-assign fl_req_i     = dev_addr_i >= 32'h84 && dev_addr_i <= 32'ha0;
-assign dev_int_o    = {kb_int, fl_int, 30'b0};
+assign fl_req       = dev_addr_i >= 32'h84 && dev_addr_i <= 32'ha0;
+assign dev_int_o    = 32'b0 | (kb_int << 2) | (fl_int << 3);
+reg    [31:0] dev_data_o;
+// assign dev_data_o   = data_select(dev_addr_i);
+
+always @(*) begin
+    if (dev_addr_i < 32'h80) begin
+        dev_data_o = mem_data;
+    end else if (dev_addr_i == 32'h80) begin
+        dev_data_o = kb_data;
+    end else if (dev_addr_i <= 32'ha0) begin
+        dev_data_o = fl_data;
+    end
+end
+
+// function automatic [31:0] data_select;
+// /*
+
+// */
+//     input [31:0] addr;
+
+//     begin
+//         if (addr < 32'h80) begin
+//             data_select = mem_data;
+//         end else if (addr == 32'h80) begin
+//             data_select = kb_data;
+//         end else if (addr <= 32'ha0) begin
+//             data_select = fl_data;
+//         end
+//     end
+// endfunction
 
 endmodule

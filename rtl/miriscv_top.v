@@ -54,6 +54,7 @@ module miriscv_top
   wire          int_core_int;
 
   wire  [31:0]  int_req_i;
+  wire  [31:0]  dev_data;
 
   assign data_rdata_core  = data_rdata_ram;
   assign data_req_ram     = data_req_core;
@@ -69,7 +70,7 @@ module miriscv_top
     .raw_instr_mi    (instr_rdata_core),
     .core_mem_pc_mo  (instr_addr_core ),
 
-    .mem_lsu_data_mi (data_rdata_core ),
+    .mem_lsu_data_mi (dev_data        ),
     .lsu_mem_req_mo  (data_req_core   ),
     .lsu_mem_we_mo   (data_we_core    ),
     .lsu_mem_mask_mo (data_be_core    ),
@@ -102,7 +103,8 @@ module miriscv_top
     .dev_addr_i         (data_addr_ram   ),
     .dev_wr_data_i      (data_wdata_ram  ),
     .int_rst_i          (core_int_rst    ),
-    .dev_int_o          (int_req_i       )
+    .dev_int_o          (int_req_i       ),
+    .dev_data_o         (dev_data        )
   );
 
 endmodule
