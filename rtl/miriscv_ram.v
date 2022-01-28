@@ -59,10 +59,10 @@ module miriscv_ram
     else if(data_req_i) begin
       
       if(data_we_i && data_be_i[0])
-        mem [data_addr_i[31:2]] [7:0]  <= data_wdata_i[7:0];
+        mem [data_addr_i[31:2]] [7:0]   <= data_wdata_i[7:0];
 
       if(data_we_i && data_be_i[1])
-        mem [data_addr_i[31:2]] [15:8] <= data_wdata_i[15:8];
+        mem [data_addr_i[31:2]] [15:8]  <= data_wdata_i[15:8];
 
       if(data_we_i && data_be_i[2])
         mem [data_addr_i[31:2]] [23:16] <= data_wdata_i[23:16];
