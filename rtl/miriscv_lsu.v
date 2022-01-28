@@ -33,8 +33,10 @@
 //
 // Dependencies: miriscv_ram
 // 
-// Revision:
-// Revision 0.01 - File Created
+// Revision: v0.1
+//  - v0.1 - file Created
+//  - v1.0 - done for stage-5
+//
 // Additional Comments:
 //  _i  suffix means - signal came from outer scope
 //  _o  suffix means - signal going to outer scope

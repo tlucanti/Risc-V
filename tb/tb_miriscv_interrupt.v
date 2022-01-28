@@ -5,7 +5,7 @@
 // 
 // Create Date: 02.01.2022 18:42:21
 // Design Name: 
-// Module Name: tb_miriscv_lsu
+// Module Name: tb_miriscv_interrupt
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -19,22 +19,22 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-
-module tb_miriscv_lsu();
-
+module tb_miriscv_interrupt();
 
 reg clk;
 reg reset;
-wire [7:0] sw = 8'b00000011;
+reg [31:0] int_req;
 
 miriscv_top dut (
-    .rst_n_i (~reset),
-    .clk_i   (clk   )
+    .rst_n_i  (~reset ),
+    .clk_i    (clk    ),
+    .int_req_i(int_req)
 );
 
 always #5 clk = ~clk;
 
 initial begin
+    int_req = 0;
     clk = 0;
     reset = 0;
     @(negedge clk);
@@ -43,6 +43,10 @@ initial begin
       @(negedge clk);
     end
     reset = 0;
+
+    // #50;
+    // int_req[1] = 1'd1;
+
     #2000;
     
     $finish();

@@ -2,485 +2,741 @@
 # @Author: kostya
 # @Date:   2021-12-08 20:56:10
 # @Last Modified by:   kostya
-# @Last Modified time: 2021-12-09 16:09:14
+# @Last Modified time: 2022-01-27 12:38:47
 
 import sys
 import platform
+import re
 
-class Color():
-	if platform.system() == 'Windows':
-		import ctypes
-		kernel32 = ctypes.windll.kernel32
-		kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
-	BLACK  = "\033[1;90m"
-	RED    = "\033[1;91m"
-	GREEN  = "\033[1;92m"
-	YELLOW = "\033[1;93m"
-	BLUE   = "\033[1;94m"
-	PURPLE = "\033[1;95m"
-	CYAN   = "\033[1;96m"
-	WHITE  = "\033[1;97m"
-	RESET  = "\033[0m"
+error_index = 0
+
+
+class Color:
+    if platform.system() == 'Windows':
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    BLACK = "\033[1;90m"
+    RED = "\033[1;91m"
+    GREEN = "\033[1;92m"
+    YELLOW = "\033[1;93m"
+    BLUE = "\033[1;94m"
+    PURPLE = "\033[1;95m"
+    CYAN = "\033[1;96m"
+    WHITE = "\033[1;97m"
+    RESET = "\033[0m"
+
+
+class AlwaysContains:
+
+    def __init__(self):
+        pass
+
+    def __contains__(self, _):
+        return True
+
+
+# ------------------------------- UTILS FUNCTIONS ------------------------------
+def contains_only(st, available):
+    if len(set(st) | set(available)) > len(set(available)):
+        return False
+    else:
+        return True
+
+
+def twos_complement(n, bits=32):
+    n = int(n)
+    mask = (1 << bits) - 1
+    if n < 0:
+        n = ((abs(n) ^ mask) + 1)
+    return '{n:0{bits}b}'.format(n=n & mask, bits=bits)
+
 
 # ----------------------------- EXCEPTIONS CLASSES -----------------------------
 class RISCvSyntaxError(SyntaxError):
-	def __init__(self, what):
-		super().__init__(what)
-		self.name = 'Syntax error'
-		self.what = what
-		self.index = error_index
+    def __init__(self, what):
+        super().__init__(what)
+        self.name = 'Syntax error'
+        self.what = what
+        self.index = error_index
 
 
-class ImmidiateError(RISCvSyntaxError):
-	def __init__(self, what):
-		super().__init__(what)
-		self.name = 'Immidiate value error'
+class RISCvImmediateError(RISCvSyntaxError):
+    def __init__(self, what):
+        super().__init__(what)
+        self.name = 'Immediate value error'
 
 
-class RegisterError(RISCvSyntaxError):
-	def __init__(self, what):
-		super().__init__(what)
-		self.name = 'Register name error'
+class RISCvRegisterError(RISCvSyntaxError):
+    def __init__(self, what):
+        super().__init__(what)
+        self.name = 'Register name error'
 
 
-class LabelError(RISCvSyntaxError):
-	def __init__(self, what, error_index):
-		super().__init__(what)
-		self.name = 'Invalid label name'
+class RISCvLabelError(RISCvSyntaxError):
+    def __init__(self, what):
+        super().__init__(what)
+        self.name = 'Invalid label name'
 
-		
+
 # ------------------------------ SUPPORT CLASSES -------------------------------
-class ALU():
-	ALU_ADD = 0b0000
-	ALU_SUB = 0b0001
-	ALU_XOR = 0b0010
-	ALU_OR  = 0b0011
-	ALU_AND = 0b0100
-	ALU_SRA = 0b0101
-	ALU_SRL = 0b0110
-	ALU_SLL = 0b0111
-	ALU_LTS = 0b1000
-	ALU_LTU = 0b1001
-	ALU_GES = 0b1010
-	ALU_GEU = 0b1011
-	ALU_EQ  = 0b1100
-	ALU_NE  = 0b1101
+class ALU:
+    ALU_ADD = 0b0000
+    ALU_SUB = 0b0001
+    ALU_XOR = 0b0010
+    ALU_OR = 0b0011
+    ALU_AND = 0b0100
+    ALU_SRA = 0b0101
+    ALU_SRL = 0b0110
+    ALU_SLL = 0b0111
+    ALU_LTS = 0b1000
+    ALU_LTU = 0b1001
+    ALU_GES = 0b1010
+    ALU_GEU = 0b1011
+    ALU_EQ = 0b1100
+    ALU_NE = 0b1101
 
 
-class Immidiate():
+class Immediate:
 
-	IMMIDIATE_ERROR_MESSAGE = '{YELLOW}Invalid Immidiate value with base ' \
-		'{PURPLE}{__base__}: {CYAN}`{__value__}`{RESET}'
-	IMMIDIATE_LIMIT_MESSAGE = '{YELLOW}Immidiate value to big: ' \
-		'{CYAN}`{__value__}`{YELLOW}, limit is {PURPLE}' \
-		+ f'[{-IMMIDIATE_LIMIT - 1} : {IMMIDIATE_LIMIT}]' + '{RESET}'
-	IMMIDIATE_ERROR_BASE = '{YELLOW}Invalid Immidiate value: ' \
-		'{CYAN}`{__value__}`{RESET}'
+    def __init__(self, imm, imm_type):
+        imm = str(imm)
+        if not contains_only(imm, '+-0123456789bBoOxXabcdefABCDEF'):
+            raise RISCvSyntaxError(f'invalid immediate literal: {imm}')
+        self.imm = None
+        if re.fullmatch('^[-+]?[0-9]+$', imm) is not None:
+            imm = int(imm)
+        elif re.fullmatch('^[-+]?0[xX][0-9a-fA-F]+$', imm) is not None:
+            imm = int(imm, 16)
+        elif re.fullmatch('^[-+]?0[oO][0-7]+$', imm) is not None:
+            imm = int(imm, 8)
+        elif re.fullmatch('^[-+]?0[bB][0-1]+$', imm) is not None:
+            imm = int(imm, 2)
+        else:
+            raise RISCvSyntaxError(f'invalid immediate literal: {imm}')
 
-	def __new__(self, imm, type):
-		sign = 1
-		if st[0] == '-':
-			sign = -1
-			st = st[1:]
-		if st[0] == '+':
-			st = st[1:]
-		if st[0:2] in ('0x', '0X'):
-			i = st[2:]
-			base = 16
-			if not contains_only(i, '0123456789abcdefABCDEF'):
-				raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.replace( \
-					'{__base__}', '16').replace( \
-					'{__value__}', i), \
-					(error_index, error_index))
-		elif st[0:2] in ('0o', '0O')
-			i = st[2:]
-			base = 8
-			if not contains_only(i, '01234567'):
-				raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.replace( \
-					'{__base__}', '8').replace( \
-					'{__value__}', i), \
-					(error_index, error_index))
-		elif st[0:2] in ('0b', '0B')
-			i = st[2:]
-			base = 2
-			if not contains_only(i, '01'):
-				raise ImmidiateError(IMMIDIATE_ERROR_MESSAGE.replace( \
-					'{__base__}', '2').replace( \
-					'{__value__}', i), \
-					(error_index, error_index))
-		else:
-			i = st
-			base = 10
-		try:
-			ans = int(i, base=base) * sign
-			if not -IMMIDIATE_LIMIT - 1 <= ans <= IMMIDIATE_LIMIT:
-				raise ImmidiateError(IMMIDIATE_LIMIT_MESSAGE.replace( \
-					'{__value__}', i), (error_index, error_index))
-			return ans
-		except ValueError:
-			raise ImmidiateError(IMMIDIATE_ERROR_BASE.replace('{__value__}', i),
-				(error_index, error_index))
+        if imm_type in 'IS':
+            rng = range(-2048, 2048)
+            self.imm_bin = twos_complement(imm, 12)
+        elif imm_type in 'B':
+            rng = range(-2048, 2048)
+            self.imm_bin = twos_complement(imm, 12)
+        elif imm_type in 'U':
+            rng = range(0, 1048576)
+            self.imm_bin = twos_complement(imm, 20)
+        elif imm_type in 'J':
+            rng = range(-524288, 524288)
+            self.imm_bin = twos_complement(imm, 20)
+        elif imm_type == 'shift':
+            rng = range(0, 31)
+            self.imm_bin = twos_complement(imm, 5)
+        elif imm_type == 'any':
+            rng = AlwaysContains()
+        elif imm_type == 'li':
+            if imm < 0:
+                rng = range(-2147483648, 2147483648)
+            else:
+                rng = range(0, 4294967296)
+        else:
+            raise SystemError(
+                f'[internal error]: Immediate::__init__ (invalid immediate type: {imm_type})')
 
-	def __init__(self, imm, type):
-		self.imm = imm
-		self.imm_str = '{imm:0{size}b}'.format(size=size, imm=imm)
+        self.imm_int = imm
+        if imm not in rng:
+            raise RISCvImmediateError(
+                f'immediate of type {imm_type} is out of range {str(rng)[5:]}')
 
-	def __getitem__(self, other):
-		return imm_str[::-1][other.stop:other.start][::-1]
+    def __bytes__(self):
+        return self.imm_bin
 
+    def __repr__(self):
+        return self.__bytes__()
 
-class Register():
-
-	def __new__(self, reg):
-		if reg is None:
-			return None
-
-		REGISTER_INDEX_MESSAGE = '{YELLOW}Invalid register index: ' \
-			'{CYAN}`{__reg__}`{RESET}'
-		REGISTER_LIMIT_MESSAGE = '{YELLOW}Invalid register index: ' \
-			'{CYAN}`{__reg__}`{YELLOW}, ' \
-			'limit is {PURPLE}{__limit__}{RESET}'
-		REGISTER_FORMAT_MESSAGE = '{YELLOW}Invalid register format: ' \
-			'{CYAN}`{__reg__}`{RESET}'
-
-		if not contains_only(st.lower(), '0123456789rasgfptxzeo'):
-			raise RegisterError(REGISTER_FORMAT_MESSAGE.replace('{__reg__}',st))
-		stl = st.lower()
-		match st.lower():
-		if stl == 'zero':
-			return Register('x0')
-		elif stl == 'ra':
-			return Register('x1')
-		elif stl == 'sp'
-			return Register('x2')
-		elif stl == 'gp':
-			return Register('x3')
-		elif stl == 'tp':
-			return Register('x4')
-		elif stl in ('t0', 't1', 't2'):
-			return Register('x' + str(int(stl[1]) + 5))
-		elif stl in ('s0', 'fp')
-			return Register('x8')
-		elif stl == 's1':
-			return Register('x9')
-
-		if st.startswith(('a', 't', 'x')) and st[1].isdigit():
-			try:
-				reg_cnt = int(st[1:])
-			except ValueError:
-				raise RegisterError(REGISTER_INDEX_MESSAGE.replace('{__reg__}',\
-					st[1:]))
-			match st[0]:
-				case 'a':
-					if reg_cnt > 7:
-						raise RegisterError(REGISTER_LIMIT_MESSAGE.replace( \
-							'{__reg__}', st[1:]).replace('{__limit__}', '7'))
-					return Register('x' + str(reg_cnt + 10), error_index)
-				case 't':
-					if reg_cnt > 6:
-						raise RegisterError(REGISTER_LIMIT_MESSAGE.replace( \
-							'{__reg__}', st[1:]).replace('{__limit__}', '6'))
-					return Register('x' + str(reg_cnt + 25))
-				case 's':
-					if reg_cnt > 11:
-						raise RegisterError(REGISTER_LIMIT_MESSAGE.replace( \
-							'{__reg__}', st[1:]).replace('{__limit__}', '11'))
-					return Register('x' + str(reg_cnt + 16))
-				case 'x':
-					if reg_cnt > 31:
-						raise RegisterError(REGISTER_LIMIT_MESSAGE.replace( \
-							'{__reg__}', st[1:]).replace('{__limit__}', \
-							str(REGISTER_NUMBER - 1)))
-					Register.__init__(self, reg_cnt)
-					return self
-		else:
-			raise RegisterError(REGISTER_FORMAT_MESSAGE.replace('{__reg__}',st))
-		
-	def __init__(self, reg_cnt):
-		self.reg = reg_cnt
-
-	def __str__(self):
-		return '{reg:05b}'.format(reg=self.reg)
-	
-
-class Funct3():
-
-	def __init__(self, f3):
-		self.f3 = f3
-
-	def __str__(self):
-		return '{f3:03b}'.format(f3=self.f3)
+    def __getitem__(self, idx):
+        if isinstance(idx, int):
+            return self.imm_bin[::-1][idx]
+        else:
+            return self.imm_bin[::-1][idx.stop:idx.start + 1][::-1]
 
 
-class Funct7():
+class Register:
+    reg_map = {
+        'zero': 0, 'x0': 0,
+        'ra': 1, 'x1': 1,
+        'sp': 2, 'x2': 2,
+        'gp': 3, 'x3': 3,
+        'tp': 4, 'x4': 4,
+        't0': 5, 'x5': 5,
+        't1': 6, 'x6': 6,
+        't2': 7, 'x7': 7,
+        'fp': 8, 'x8': 8,
+        's0': 8,
+        's1': 9, 'x9': 9,
+        'a0': 10, 'x10': 10,
+        'a1': 11, 'x11': 11,
+        'a2': 12, 'x12': 12,
+        'a3': 13, 'x13': 13,
+        'a4': 14, 'x14': 14,
+        'a5': 15, 'x15': 15,
+        'a6': 16, 'x16': 16,
+        'a7': 17, 'x17': 17,
+        's2': 18, 'x18': 18,
+        's3': 19, 'x19': 19,
+        's4': 20, 'x20': 20,
+        's5': 21, 'x21': 21,
+        's6': 22, 'x22': 22,
+        's7': 23, 'x23': 23,
+        's8': 24, 'x24': 24,
+        's9': 25, 'x25': 25,
+        's10': 26, 'x26': 26,
+        's11': 27, 'x27': 27,
+        't3': 28, 'x28': 28,
+        't4': 29, 'x29': 29,
+        't5': 30, 'x30': 30,
+        't6': 31, 'x31': 31,
+    }
+    message = 'register {reg} is not recognized'
 
-	def __init__(self, f7):
-		self.f7 = f7
+    def __init__(self, reg):
+        if reg not in self.reg_map:
+            raise RISCvRegisterError(self.message.format(reg=reg))
+        self.reg = self.reg_map[reg]
+        self.str = reg
 
-	def __str__(self):
-		return '{f7:07b}'.format(f7=self.f7)
+    def __bytes__(self):
+        return '{reg:05b}'.format(reg=self.reg)
+
+    def __repr__(self):
+        return self.__bytes__()
 
 
-class Opcode():
+class CsrRegister(Register):
 
-	def __init__(self, op):
-		self.op = op
+    reg_map = {
+        'mie': 0x304,
+        'mtvec': 0x305,
+        'mscratch': 0x340,
+        'mepc': 0x341,
+        'mcause': 0x342
+    }
+    message = 'csr register {reg} is not recognized'
 
-	def __str__(self):
-		return '{op:07b}'.format(op=self.op)
+    def __init__(self, reg):
+        super().__init__(reg)
+
+    def __bytes__(self):
+        return '{reg:012b}'.format(reg=self.reg)
+
+
+class Label:
+    labels = dict()
+
+    @staticmethod
+    def create(label, cnt):
+        if not label.isalnum():
+            raise RISCvLabelError(
+                f'label name can contain only digits and letters: {label}')
+        if label in Label.labels:
+            raise RISCvLabelError(f'label {label} redefined')
+        Label.labels[label] = cnt
+
+    def __init__(self, label):
+        if not label.isalnum():
+            raise RISCvLabelError(
+                f'label name can contain only digits and letters: {label}')
+        self.label = label
+
+    def to_immediate(self, imm_type, cnt):
+        if self.label not in self.labels:
+            raise RISCvLabelError(f'label {self.label} is not defined')
+        imm = self.labels[self.label] - cnt
+        if imm_type == 'la':
+            imm += 1
+            imm <<= 1
+            imm_type = 'I'
+        return Immediate(imm << 1, imm_type)
+
+
+class Funct3:
+
+    def __init__(self, f3):
+        self.f3 = f3
+
+    def __bytes__(self):
+        return '{f3:03b}'.format(f3=self.f3)
+
+    def __repr__(self):
+        return self.__bytes__()
+
+
+class Funct7:
+
+    def __init__(self, f7):
+        self.f7 = f7
+
+    def __bytes__(self):
+        return '{f7:07b}'.format(f7=self.f7)
+
+    def __repr__(self):
+        return self.__bytes__()
+
+
+class Opcode:
+
+    def __init__(self, op):
+        self.op = op
+
+    def __bytes__(self):
+        return '{op:07b}'.format(op=self.op)
+
+    def __repr__(self):
+        return self.__bytes__()
+
+
+class OpHt:
+
+    def __init__(self, opcode, funct7=None, funct3=None):
+        self.funct7 = Funct7(funct7)
+        self.funct3 = Funct3(funct3)
+        self.opcode = Opcode(opcode)
 
 
 # --------------------------- MAIN INSTRUCTION CLASS ---------------------------
-class Instruction():
+class Instruction:
+    R_inst = {'slli', 'srli', 'srai', 'add', 'sub', 'sll', 'slt', 'sltu', 'xor',
+              'srl', 'sra', 'or', 'ans'}
+    I_inst = {'jalr', 'lb', 'lh', 'lw', 'lbu', 'lhu', 'addi', 'slti', 'sltiu',
+              'xori', 'ori', 'andi',
+              'ebreak', 'mret', 'csrrw', 'csrrs', 'csrrc'}
+    S_inst = {'sb', 'sh', 'sw'}
+    B_inst = {'beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu'}
+    U_inst = {'lui', 'auipc'}
+    J_inst = {'jal'}
+    Pseudo_inst = {'li', 'j', 'la', 'csrr', 'csrw'}
 
-	Rtype = {'slli', 'srli', 'srai', 'add', 'sub', 'sll', 'slt', 'sltu', 'xor',\
-		'srl', 'sra', 'or', 'ans'}
-	Itype = {'jalr', 'lb', 'lh', 'lw', 'lbu', 'lhu', 'addi', 'slti', 'sltiu', \
-		'xori', 'ori', 'andi', 'fence', 'ecall', \
-		'ebreak'}
-	Stype = {'sb', 'sh', 'sw'}
-	Btype = {'beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu'}
-	Utype = {'lui', 'auipc'}
-	Jtype = {'jal'}
-	Pseudo = {'la', 'nop', 'mv', 'not', 'neg', 'seqz', 'sneq', 'sltz', 'sgez', \
-		'beqz', 'bnez', 'blez', 'bgez', 'bltz', \
-		'bgtz', 'ble', 'bgtu', 'bleu', 'j', 'jr', 'ret', 'call', 'tail'}
+    # Pseudo_inst = {'la', 'nop', 'mv', 'not', 'neg', 'seqz', 'sneq', 'sltz',
+    #                'sgez',
+    #                'beqz', 'bnez', 'blez', 'bgez', 'bltz',
+    #                'bgtz', 'ble', 'bgtu', 'bleu', 'j', 'jr', 'ret', 'call',
+    #                'tail'}
 
-	class op_ht():
-		def __init__(self, opcode, funct7=None, funct3=None):
-			self.funct7 = Funct7(funct7)
-			self.funct3 = Funct3(funct3)
-			self.opcode = Opcode(opcode)
+    def __init__(self):
 
-	def __init__(self):
-		self.labels = dict()
+        self.imm = None
+        self.funct7 = None
+        self.funct3 = None
+        self.rs1 = None
+        self.rs2 = None
+        self.rd = None
+        self.label = None
+        self.opcode = None
+        self.type = None
+        self.op = None
+        self.reg = None
+        self.instr_cnt = None
+        self.line = None
 
-	def parse(self, line, instr_cnt):
-		split = line.split()
-		while split[0].endswith(':'):
-			label = split[0][:-1]
-			if not label.isalnum():
-				raise RISCvLabelError("label name can contain only digits and '\
-					'letters", 0)
-			if label in self.labels:
-				raise RISCvLabelError("label redefined", lb)
-			self.labels[label] = instr_cnt
-			del split[0]
-			if len(split) == 0:
-				return None
+    def __repr__(self):
+        return self.line
 
-		op = split[0].lower()
-		if op in Rtype:
-			instr = self.Rtype(split)
-		elif op in Itype:
-			instr = self.Itype(split)
-		elif op in Stype:
-			instr = self.Stype(split)
-		elif op in Btype:
-			instr = self.Btype(split)
-		elif op in Utype:
-			instr = self.Utype(split)
-		elif op in Jtype:
-			instr = self.Jtype(split)
-		elif op in Pseudo:
-			instr = self.Pseudo(split)
-		else:
-			raise RISCvSyntaxError(
-				'{YELLOW}illegal instruction {CYAN}`' + ops[0] \
-				+ '`{RESET}', (0, 0))
-		return instr
+    def parse(self, line, instr_cnt):
+        global error_index
 
-	def check_args(self, line, format):
-		for i in range(len(format)):
-			if i >= len(line):
-				if format[i] == 'imm':
-					raise RISCvSyntaxError('expected immidiate value')
-				elif format[i] == 'reg':
-					raise RISCvSyntaxError('expected register')
-				elif format[i] == 'label':
-					raise RISCvSyntaxError('expected label')
-				else:
-					raise SyntaxError(
-						f'unexpected format cheker value: `{format[i]}`')
-			elif format[i] == 'imm':
-				continue
-			elif format[i] == 'reg':
-				continue
-			elif format[i] == 'label':
-				if format[i] in self.labels:
-					return self.labels[format[i]]
-				else:
+        self.line = line
+        self.instr_cnt = instr_cnt
+        split = line.split()
+        error_index = -1
+        while len(split) > 0 and split[0].endswith(':'):
+            error_index += 1
+            Label.create(split[0][:-1], instr_cnt)
+            del split[0]
+        if len(split) == 0:
+            return []
+
+        _error_index = error_index
+        error_index -= 1
+        for label in split:
+            error_index += 1
+            if label.endswith(':'):
+                raise RISCvLabelError(
+                    f'label {label} in the middle of the instruction')
+        error_index = _error_index
+
+        op = split[0].lower()
+        if op in self.R_inst:
+            instr = self.r_type(split)
+        elif op in self.I_inst:
+            instr = self.i_type(split)
+        elif op in self.S_inst:
+            instr = self.s_type(split)
+        elif op in self.B_inst:
+            instr = self.b_type(split)
+        elif op in self.U_inst:
+            instr = self.u_type(split)
+        elif op in self.J_inst:
+            instr = self.j_type(split)
+        elif op in self.Pseudo_inst:
+            instr = self.pseudo_type(split)
+        else:
+            raise RISCvSyntaxError(
+                '{YELLOW}illegal instruction {CYAN}`' + op[0] + '`{RESET}')
+        return instr
+
+    def check_args(self, line, fmt):
+        global error_index
+
+        line = line[1:]
+        for i in range(len(fmt)):
+            error_index = i
+            if i >= len(line):
+                if fmt[i] == 'imm':
+                    raise RISCvSyntaxError('expected immediate value')
+                elif fmt[i] == 'reg':
+                    raise RISCvSyntaxError('expected register')
+                elif fmt[i] == 'label':
+                    raise RISCvSyntaxError('expected label')
+                elif fmt[i] == 'offset':
+                    raise RISCvSyntaxError('expected offset value')
+                else:
+                    raise SystemError(
+                        f'[internal error]: compiler::Instruction::check_args (invalid format checker value {fmt[i]})')
+            elif fmt[i] == 'imm':
+                _ = Immediate(line[i], 'any')
+            elif fmt[i] == 'reg':
+                _ = Register(line[i])
+            elif fmt[i] == 'label':
+                _ = Label(line[i])
+            elif fmt[i] == 'offset':
+                _ = self.parse_offset(line[i])
+            elif fmt[i] == 'csr':
+                _ = CsrRegister(line[i])
+            else:
+                raise SystemError(
+                    f'[internal error]: compiler::Instruction::check_args (invalid format checker value {fmt[i]})')
+
+    def compile(self, instr_cnt):
+
+        imm = self.imm
+        funct7 = self.funct7
+        funct3 = self.funct3
+        rs1 = self.rs1
+        rs2 = self.rs2
+        rd = self.rd
+        label = self.label
+        opcode = self.opcode
+        reg = self.reg
+
+        if self.type == 'la':
+            imm = label.to_immediate('la', instr_cnt)
+            self.type = 'I'
+
+        if self.type == 'R':
+            instr_bin = f'{funct7}{rs2}{rs1}{funct3}{rd}{opcode}'
+        elif self.type == 'I':
+            instr_bin = f'{imm}{rs1}{funct3}{rd}{opcode}'
+        elif self.type == 'S':
+            instr_bin = f'{imm[11:5]}{rs2}{rs1}{funct3}{imm[4:0]}{opcode}'
+        elif self.type == 'B':
+            imm = label.to_immediate('B', instr_cnt)
+            instr_bin = f'{imm[11]}{imm[9:4]}{rs2}{rs1}{funct3}{imm[3:0]}{imm[10]}{opcode}'
+        elif self.type == 'U':
+            instr_bin = f'{imm}{reg}{opcode}'
+        elif self.type == 'J':
+            imm = label.to_immediate('J', instr_cnt)
+            instr_bin = f'{imm[19]}{imm[9:0]}{imm[10]}{imm[18:11]}{reg}{opcode}'
+        else:
+            raise SystemError(f'[internal error]: compiler::Instruction::compile (invalid isntruction type {self.type})')
+
+        return instr_bin
+
+    @staticmethod
+    def parse_offset(offset):
+        split = offset.split('(')
+        if len(split) > 2:
+            raise RISCvSyntaxError(f'invalid offset format: {offset}')
+        imm_str, reg_str = split
+        reg_str = reg_str[:-1]
+        _ = Immediate(imm_str, 'any')
+        _ = Register(reg_str)
+        return imm_str, reg_str
+
+    def r_type(self, line):
+
+        op_ht = {
+            'slli': OpHt(funct7=0b0000000, funct3=0b001, opcode=0b0010011),
+            'srli': OpHt(funct7=0b0000000, funct3=0b101, opcode=0b0010011),
+            'srai': OpHt(funct7=0b0100000, funct3=0b101, opcode=0b0010011),
+            'add': OpHt(funct7=0b0000000, funct3=0b000, opcode=0b0110011),
+            'sub': OpHt(funct7=0b0100000, funct3=0b000, opcode=0b0110011),
+            'sll': OpHt(funct7=0b0000000, funct3=0b001, opcode=0b0110011),
+            'slt': OpHt(funct7=0b0000000, funct3=0b010, opcode=0b0110011),
+            'sltu': OpHt(funct7=0b0000000, funct3=0b011, opcode=0b0110011),
+            'xor': OpHt(funct7=0b0000000, funct3=0b100, opcode=0b0110011),
+            'srl': OpHt(funct7=0b0000000, funct3=0b101, opcode=0b0110011),
+            'sra': OpHt(funct7=0b0100000, funct3=0b101, opcode=0b0110011),
+            'or': OpHt(funct7=0b0000000, funct3=0b110, opcode=0b0110011),
+            'and': OpHt(funct7=0b0000000, funct3=0b111, opcode=0b0110011),
+        }
+
+        self.type = 'R'
+        self.op = line[0]
+
+        self.funct7 = op_ht[self.op].funct7
+        if self.op in ('slli', 'srli', 'srai'):
+            self.check_args(line, ('reg', 'reg', 'imm'))
+            self.rs2 = Immediate(line[3], 'shift')
+        else:
+            self.check_args(line, ('reg', 'reg', 'reg'))
+            self.rs2 = Register(line[3])
+
+        self.rs1 = Register(line[2])
+        self.funct3 = op_ht[self.op].funct3
+        self.rd = Register(line[1])
+        self.opcode = op_ht[self.op].opcode
+
+        return [self]
+
+    def i_type(self, line):
+
+        op_ht = {
+            'jalr': OpHt(funct3=0b000, opcode=0b1100111),
+            'lb': OpHt(funct3=0b000, opcode=0b0000011),
+            'lh': OpHt(funct3=0b001, opcode=0b0000011),
+            'lw': OpHt(funct3=0b010, opcode=0b0000011),
+            'lbu': OpHt(funct3=0b100, opcode=0b0000011),
+            'lhu': OpHt(funct3=0b101, opcode=0b0000011),
+            'addi': OpHt(funct3=0b000, opcode=0b0010011),
+            'slti': OpHt(funct3=0b010, opcode=0b0010011),
+            'sltiu': OpHt(funct3=0b011, opcode=0b0010011),
+            'xori': OpHt(funct3=0b100, opcode=0b0010011),
+            'ori': OpHt(funct3=0b110, opcode=0b0010011),
+            'andi': OpHt(funct3=0b111, opcode=0b0010011),
+            'mret': OpHt(funct3=0b000, opcode=0b1110011),
+            'csrrw': OpHt(funct3=0b001, opcode=0b1110011),
+            'csrrs': OpHt(funct3=0b010, opcode=0b1110011),
+            'csrrc': OpHt(funct3=0b011, opcode=0b1110011),
+            'ebreak': OpHt(funct3=0b000, opcode=0b1110011)
+        }
+
+        self.type = 'I'
+        self.op = line[0]
+
+        if self.op in {'mret', 'ebreak'}:
+            self.check_args(line, ())
+            if self.op == 'mret':
+                self.imm = Immediate(0, 'I')
+            elif self.op == 'ebreak':
+                self.imm = Immediate(1, 'I')
+            else:
+                raise SyntaxError(f'[internal error] compiler::Instruction::i_type (invalid system instruction {self.op})')
+            self.rs1 = Register('x0')
+            self.rd = Register('x0')
+        elif self.op in {'csrrw', 'csrrs', 'csrrc'}:
+            self.check_args(line, ('reg', 'csr', 'reg'))
+            self.imm = CsrRegister(line[2])
+            self.rs1 = Register(line[3])
+            self.rd = Register(line[1])
+        elif self.op in {'lb', 'lh', 'lw', 'lbu', 'lhu'}:
+            self.check_args(line, ('reg', 'offset'))
+            self.imm, self.rs1 = self.parse_offset(line[2])
+            self.imm = Immediate(self.imm, 'I')
+            self.rs1 = Register(self.rs1)
+            self.rd = Register(line[1])
+        else:
+            self.check_args(line, ('reg', 'reg', 'imm'))
+            self.imm = Immediate(line[3], 'I')
+            self.rs1 = Register(line[2])
+            self.rd = Register(line[1])
+        self.funct3 = op_ht[self.op].funct3
+
+        self.opcode = op_ht[self.op].opcode
+
+        return [self]
+
+    def s_type(self, line):
+
+        op_ht = {
+            'sb': OpHt(funct3=0b000, opcode=0b0100011),
+            'sh': OpHt(funct3=0b001, opcode=0b0100011),
+            'sw': OpHt(funct3=0b010, opcode=0b0100011)
+        }
+
+        self.check_args(line, ('reg', 'offset'))
+
+        self.type = 'S'
+        self.op = line[0]
+        self.imm, self.rs1 = self.parse_offset(line[2])
+        self.imm = Immediate(self.imm, 'S')
+        self.rs2 = Register(line[1])
+        self.rs1 = Register(self.rs1)
+        self.funct3 = op_ht[self.op].funct3
+        self.opcode = op_ht[self.op].opcode
+
+        return [self]
+
+    def b_type(self, line):
+
+        op_ht = {
+            'beq': OpHt(funct3=0b000, opcode=0b1100011),
+            'bne': OpHt(funct3=0b001, opcode=0b1100011),
+            'blt': OpHt(funct3=0b100, opcode=0b1100011),
+            'bge': OpHt(funct3=0b101, opcode=0b1100011),
+            'bltu': OpHt(funct3=0b110, opcode=0b1100011),
+            'bgeu': OpHt(funct3=0b111, opcode=0b1100011)
+        }
+
+        self.check_args(line, ('reg', 'reg', 'label'))
+
+        self.type = 'B'
+        self.op = line[0]
+        self.label = Label(line[3])
+        self.rs2 = Register(line[2])
+        self.rs1 = Register(line[1])
+        self.funct3 = op_ht[self.op].funct3
+        self.opcode = op_ht[self.op].opcode
+
+        return [self]
+
+    def u_type(self, line):
+
+        op_ht = {
+            'lui': OpHt(opcode=0b0110111),
+            'auipc': OpHt(opcode=0b0010111)
+        }
+
+        self.check_args(line, ('reg', 'imm'))
+
+        self.type = 'U'
+        self.op = line[0]
+        self.reg = Register(line[1])
+        self.imm = Immediate(line[2], 'U')
+        self.opcode = op_ht[self.op].opcode
+
+        return [self]
+
+    def j_type(self, line):
+
+        op_ht = {
+            'jal': OpHt(opcode=0b1101111)
+        }
+
+        self.check_args(line, ('reg', 'label'))
+
+        self.type = 'J'
+        self.op = line[0]
+        self.label = Label(line[2])
+        self.reg = Register(line[1])
+        self.opcode = op_ht[self.op].opcode
+
+        return [self]
+
+    def pseudo_type(self, line):
+
+        op = line[0]
+
+        if op == 'li':
+            self.check_args(line, ('reg', 'imm'))
+            reg = Register(line[1])
+            imm = Immediate(line[2], 'li')
+            if 2048 <= imm.imm_int or imm.imm_int < -2048:
+                imm = twos_complement(imm.imm_int, 32)
+                imm = int(imm, 2)
+                upper_immediate = imm >> 12
+                if imm - (upper_immediate << 12) >= 2048:
+                    upper_immediate += 1
+                elif imm - (upper_immediate << 12) < -2048:
+                    upper_immediate -= 1
+                lui = Instruction().parse(f'lui {reg.str} {upper_immediate}', self.instr_cnt)
+                self.instr_cnt += 1
+                rs1 = reg.str
+            else:
+                upper_immediate = 0
+                imm = imm.imm_int
+                lui = []
+                rs1 = 'x0'
+            self.instr_cnt += 1
+            addi = Instruction().parse(f'addi {reg.str} {rs1} {imm - (upper_immediate << 12)}', self.instr_cnt)
+            return lui + addi
+        elif op == 'j':
+            self.check_args(line, ('label',))
+            return Instruction().parse(f'jal x0 {line[1]}', self.instr_cnt)
+        elif op == 'la':
+
+            auipc = Instruction().parse(f'auipc {line[1]} 0', self.instr_cnt)
+            self.instr_cnt += 1
+            op_ht = {
+                'la': OpHt(funct3=0b000, opcode=0b0010011),
+            }
+
+            self.check_args(line, ('reg', 'label'))
+
+            self.type = 'la'
+            self.op = line[0]
+            self.label = Label(line[2])
+            self.rd = Register(line[1])
+            self.rs1 = Register(line[1])
+            self.funct3 = op_ht[self.op].funct3
+            self.opcode = op_ht[self.op].opcode
+
+            return auipc + [self]
+        elif op == 'csrr':
+            self.check_args(line, ('reg', 'csr'))
+            return Instruction().parse(f'csrrs {line[1]} {line[2]} zero', self.instr_cnt)
+        elif op == 'csrw':
+            self.check_args(line, ('csr', 'reg'))
+            return Instruction().parse(f'csrrw zero {line[1]} {line[2]}', self.instr_cnt)
+        else:
+            raise SystemError(f'[internal error] compiler::Instruction::pseudo_type (invalid pseudo instruction {op})')
 
 
+def compile_file(file):
+    instructions = []
+    line_num = 0
+    Label.labels = dict()
+    while True:
+        line = file.readline()
+        if line == '':
+            break
+        if '#' in line:
+            line = line[:line.index('#')]
+        line = line.expandtabs(4)
+        line = line.replace(',', '')
+        line = line.strip('\n')
+        line = line.strip()
+        parsed = Instruction().parse(line, line_num)
+        instructions += parsed
+        line_num += len(parsed)
+    for i in range(len(instructions)):
+        instructions[i] = instructions[i].compile(i)
+        inst = instructions[i]
+        if len(inst) != 32:
+            raise SystemError("[internal error] compiler::compile_file (instruction length not equal 32)")
+    instructions = ['{:08x}'.format(int(instr, 2)) for instr in instructions]
+    return instructions
 
-	def Rtype(self, line):
 
-		op_ht = {
-			'slli': Op_ht(funct7=0b0000000, funct3=0b001, opcode=0b0010011),
-			'srli': Op_ht(funct7=0b0000000, funct3=0b101, opcode=0b0010011),
-			'srai': Op_ht(funct7=0b0100000, funct3=0b101, opcode=0b0010011),
-			'add' : Op_ht(funct7=0b0000000, funct3=0b000, opcode=0b0110011),
-			'sub' : Op_ht(funct7=0b0100000, funct3=0b000, opcode=0b0110011),
-			'sll' : Op_ht(funct7=0b0000000, funct3=0b001, opcode=0b0110011),
-			'slt' : Op_ht(funct7=0b0000000, funct3=0b010, opcode=0b0110011),
-			'sltu': Op_ht(funct7=0b0000000, funct3=0b011, opcode=0b0110011),
-			'xor' : Op_ht(funct7=0b0000000, funct3=0b100, opcode=0b0110011),
-			'srl' : Op_ht(funct7=0b0000000, funct3=0b101, opcode=0b0110011),
-			'sra' : Op_ht(funct7=0b0100000, funct3=0b101, opcode=0b0110011),
-			'or'  : Op_ht(funct7=0b0000000, funct3=0b110, opcode=0b0110011),
-			'and' : Op_ht(funct7=0b0000000, funct3=0b111, opcode=0b0110011),
-		}
+def main():
+    if len(sys.argv) == 1:
+        print('no input files')
+        return
+    for file in sys.argv[1:]:
+        if not file.endswith('.s'):
+            if '.' in file:
+                print(f'unsupported file format: .{file.split(".")[-1]}')
+            else:
+                print(f'unsupported file format: {file}')
+            continue
+        try:
+            with open(file, 'r') as f:
+                print(f'started compiling {file}')
+                instr = compile_file(f)
+        except FileNotFoundError:
+            print(f'cannot open {f.name}')
+        else:
+            print('compilation successful')
+            with open(file[:-2] + '.bin', 'w') as outf:
+                outf.write('\n'.join(instr))
 
-		self.check_args(line, ('op', 'reg', 'reg', ('reg', 'imm')))
 
-		op = line[0]
-		funct7 = op_ht[op].funct7
-		if op in ('slli', 'srli', 'srai'):
-			rs2 = Immidiate(line[3], 'R')
-		else:
-			rs2 = Register(line[3])
-
-		rs1 = Register(line[2])
-		funct3 = op_ht[op].funct3
-		rd = Register(line[1])
-		opcode = op_ht[op].opcode
-
-		instr_bin = '{funct7}{rs2}{rs1}{funct3}{rd}{opcode}'.format(
-			funct7=funct7, \
-			rs2=rs2, \
-			rs1=rs1, \
-			funct3=funct3, \
-			opcode=opcode
-		)
-		return [instr]
-
-	def Itype(self, line):
-
-		op_ht = {
-			'lb'	: Op_ht(funct3=0b000, opcode=0b0000011),
-			'lh'	: Op_ht(funct3=0b001, opcode=0b0000011),
-			'lw'	: Op_ht(funct3=0b010, opcode=0b0000011),
-			'lbu'	: Op_ht(funct3=0b100, opcode=0b0000011),
-			'lhu'	: Op_ht(funct3=0b101, opcode=0b0000011),
-			'addi'	: Op_ht(funct3=0b000, opcode=0b0010011),
-			'slti'	: Op_ht(funct3=0b010, opcode=0b0010011),
-			'sltiu'	: Op_ht(funct3=0b011, opcode=0b0010011),
-			'xori'	: Op_ht(funct3=0b100, opcode=0b0010011),
-			'ori'	: Op_ht(funct3=0b110, opcode=0b0010011),
-			'andi'	: Op_ht(funct3=0b111, opcode=0b0010011)
-		}
-
-		self.check_args(line, ('op', 'reg', 'reg', 'imm'))
-
-		op = line[0]
-		imm = Immidiate(line[3], 'I')
-		rs1 = Register(line[2])
-		funct3 = op_ht[op].funct3
-		rd = Register(line[1])
-		opcode = op_ht[op].opcode
-
-		instr_bin = '{imm}{rs1}{funct3}{rd}{opcode}'.format(
-			imm=imm, \
-			rs1=rs1, \
-			funct3=funct3, \
-			rd=rd, \
-			opcode=opcode
-		)
-		return [instr]
-
-	def Stype(self, line):
-
-		op_ht = {
-			'sb'	: Op_ht(funct3=0b000, opcode=0b0100011),
-			'sh'	: Op_ht(funct3=0b001, opcode=0b0100011),
-			'sw'	: Op_ht(funct3=0b010, opcode=0b0100011)
-		}
-
-		self.check_args(line, ('reg', 'offset'))
-
-		imm, rs1 = self.parse_offset(line[2])
-		imm = parse_imm(imm, 7)
-		rs2 = Register(line[1])
-		rs1 = Register(rs1)
-		funct3 = op_ht[op].funct3
-		opcode = op_ht[op].opcode
-
-		instr_bin = '{imm_11_5}{rs2}{rs1}{funct3}{imm_4_0}{opcode}'.format(
-				imm_11_5=imm[11:5], \
-				rs2=rs2, \
-				rs1=rs1, \
-				funct3=funct3, \
-				imm_4_0=imm[4:0], \
-				opcode=opcode \
-			)
-
-		return [instr_bin]
-
-	def Btype(self, line):
-
-		op_ht = {
-			'beq'	: Op_ht(funct3=0b000, opcode=0b1100011),
-			'bne'	: Op_ht(funct3=0b001, opcode=0b1100011),
-			'blt'	: Op_ht(funct3=0b100, opcode=0b1100011),
-			'bge'	: Op_ht(funct3=0b101, opcode=0b1100011),
-			'bltu'	: Op_ht(funct3=0b110, opcode=0b1100011),
-			'bgeu'	: Op_ht(funct3=0b111, opcode=0b1100011)
-		}
-
-		imm = self.check_args(line, ('reg', 'reg', 'label', 'imm'))
-
-		imm = Immidiate(imm, 'B')
-		rs2 = Register(line[2])
-		rs1 = Register(line[1])
-		funct3 = op_ht[op].funct3
-		opcode = op_ht[op].opcode
-
-		instr_bin = \
-			'{imm_12}{imm_10_5}{rs2}{rs1}{funct3}{imm_4_1}{imm_11}'.format(
-				imm_12=imm[12], \
-				imm_10_5=imm[10:5], \
-				rs2=rs2, \
-				rs1=rs1, \
-				funct3=funct3, \
-				imm_4_1=imm[4:1], \
-				imm_11=imm[11]
-			)
-
-		return [instr_bin]
-
-	def Utype(self, line):
-
-		op_ht = {
-			'lui'	: Op_ht(opcode=0b0110111),
-			'auipc'	: Op_ht(opcode=0b0010111)
-		}
-
-		self.check_args(line, ('reg', 'imm'))
-
-		reg = Register(line[1])
-		imm = Immidiate(line[2], 'U')
-		opcode = op_ht[op].opcode
-		
-	def Jtype(self, line):
-
-		op_ht = {
-			'jal'	: Op_ht(opcode=0b1101111)	
-		}
-
-		imm = self.check_args(line, ('reg', 'label'))
-
-		imm = Immidiate(line[2], 'J')
-		reg = Register(line[1])
-		opcode = op_ht[op].opcode
-
-		instr_bin = '{imm_20}{imm_10_1}{imm_11}{imm_19_12}{rd}{opcode}'.format(
-			imm_20=imm[20],
-			imm_10_1=imm[10:1],
-			imm_19_12=imm[19:12],
-			opcode=opcode
-		)
-
-		return [instr_bin]
-
-	def PseudoType(self, line):
-		return None
+if __name__ == '__main__':
+    main()

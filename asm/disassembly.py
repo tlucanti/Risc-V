@@ -2,7 +2,7 @@
 # @Author: kostya
 # @Date:   2021-12-04 21:23:40
 # @Last Modified by:   kostya
-# @Last Modified time: 2021-12-25 18:04:06
+# @Last Modified time: 2022-01-23 19:57:52
 
 import sys
 
@@ -267,8 +267,6 @@ class Instruction(object):
 		elif self.opcode == Instruction.ECALL_OPCODE:
 			if self.funct3 != 0:
 				self.instruction = 'INVALID ECALL/EBREAK INSTRUCTION (funct3)'
-			elif self.funct7 != 0:
-				self.instruction = 'INVALID ECALL/EBREAK INSTRUCTION (funct7)'
 			elif self.imm == 0:
 				self.instruction = 'ECALL'
 			elif self.imm == 1:
@@ -307,13 +305,13 @@ instr_arr = []
 argv = sys.argv[1:]
 for instr in argv:
 	if instr.startswith('0b'):
-		instr = hex(int(instsr, 2))[2:]
-	print(f'parsing instruction {instr}')
+		instr = hex(int(instr, 2))[2:]
+	# print(f'parsing instruction {instr}')
 	print(Instruction(int(instr, 16)))
 	print()
 for instr in instr_arr:
 	if instr.startswith('0b'):
-		instr = hex(int(instsr, 2))[2:]
-	print(f'parsing instruction {instr}')
+		instr = hex(int(instr, 2))[2:]
+	# print(f'parsing instruction {instr}')
 	print(Instruction(instr))
 	print()

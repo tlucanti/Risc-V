@@ -1,8 +1,31 @@
+`timescale 1ns / 1ps
+////////////////////////////////////////////////////////////////////////////////
+// Company: Miet
+// Engineer: Kostya
+// 
+// Create Date: 20.11.2021 15:13:33
+// Design Name: RISC-V
+// Module Name: interrupt_controller
+// Project Name: RISC-V
+// Target Devices: any
+// Tool Versions: 2021.2
+// Description:
+//   sync module
+//
+// Parameters:
+//
+// Dependencies:
+// 
+// Revision: v0.1
+//  - v0.1 - file Created
+//  - v1.0 - done for stage-5
+//  - v1.1 - add header, change RAM size
+//
+// Additional Comments:
+// 
+////////////////////////////////////////////////////////////////////////////////
+
 module miriscv_ram
-#(
-  parameter RAM_SIZE      = 256, // bytes
-  parameter RAM_INIT_FILE = ""
-)
 (
   // clock, reset
   input clk_i,
@@ -21,23 +44,13 @@ module miriscv_ram
   input         [31:0]  data_wdata_i
 );
 
-  reg [31:0]    mem [0:RAM_SIZE/4-1];
+  localparam    RAM_SIZE = 128;
 
-  // //Init RAM
-  // integer ram_index;
-
-  // initial begin
-  //   if(RAM_INIT_FILE != "")
-  //     $readmemh(RAM_INIT_FILE, mem);
-  //   else
-  //     for (ram_index = 0; ram_index < RAM_SIZE/4-1; ram_index = ram_index + 1)
-  //       mem[ram_index] = {32{1'b0}};
-  // end
-
+  reg [31:0]    mem [0:RAM_SIZE-1];
 
   //Instruction port
-  assign instr_rdata_o = mem[(instr_addr_i / 4) % RAM_SIZE];
-  assign data_rdata_o  = mem[(data_addr_i / 4) % RAM_SIZE];
+  assign instr_rdata_o = mem[instr_addr_i / 4];
+  assign data_rdata_o  = mem[data_addr_i / 4];
 
   always@(posedge clk_i) begin
     if(!rst_n_i) begin
