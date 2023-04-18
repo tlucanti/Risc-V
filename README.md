@@ -5,53 +5,54 @@
 RISC-V single-stroke processor with i32 extension with support of hardware and software interrupts and DMA module for peripheral devices (in Verilog)
 
 ### Supported instructions
-| Instr	| Syntax			| Type  | Explain					| Comment								|
-| ----- | -----------------	|:-----:| ------------------------- | --------------------------------- 	|
-| add	| add a0 a1 a2		| R		| a0 <= a1 + a2				| arithmetic signed sum					|
-| sub	| sub a0 a1 a2		| R		| a0 <= a1 - a2				| arithmetic signed substruction		|
-| xor	| xor a0 a1 a2		| R		| a0 <= a1 ^ a2				| binary xor							|
-| or	| or a0 a1 a2		| R		| a0 <= a1 \| a2			| binary or								|
-| and	| and a0 a1 a2		| R		| a0 <= a1 & a2				| binary and							|
-| sll	| sll a0 a1 a2		| R		| a0 <= a1 << a2			| logical shift left (unsiged)			|
-| srl	| srl a0 a1 a2		| R		| a0 <= a1 >> a2			| logical shift right (unsiged)			|
-| srl	| srl a0 a1 a2		| R		| a0 <= a1 >> a2			| logical shift right (unsiged)			|
-| sra	| sra a0 a1 a2		| R		| a0 <= a1 >>> a2			| arithmetic shift right (signed)		|
-| slt	| slt a0 a1 a2		| R		| a0 <= a1 > a2 ? 1 : 0		| set less than (signed)				|
-| sltu	| slt a0 a1 a2		| R		| a0 <= a1 > a2 ? 1 : 0		| set less than (unsigned)				|
-| addi	| addi a0 a1 123	| I		| a0 <= a1 + 123			| arithmetic signed sum					|
-| xori	| xori a0 a1 123	| I		| a0 <= a1 ^ 123			| binary xor							|
-| ori	| ori a0 a1 123		| I		| a0 <= a1 \| 123			| binary or								|
-| andi	| andi a0 a1 123	| I		| a0 <= a1 & 123			| binary and							|
-| slli	| slli a0 a1 123	| I		| a0 <= a1 << 123			| logical shift left (unsiged)			|
-| srli	| srli a0 a1 123	| I		| a0 <= a1 >> 123			| logical shift right (unsiged)			|
-| srli	| srli a0 a1 123	| I		| a0 <= a1 >> 123			| logical shift right (unsiged)			|
-| srai	| srai a0 a1 123	| I		| a0 <= a1 >>> 123			| arithmetic shift right (signed)		|
-| slti	| slti a0 a1 123	| I		| a0 <= a1 > 123 ? 1 : 0	| set less than (signed)				|
-| sltui	| slti a0 a1 123	| I		| a0 <= a1 > 123 ? 1 : 0	| set less than (unsigned)				|
-| lb	| lb a0 123(a0)		| L		| a0 <= MEM[123 + a0][7:0]	| load byte from memory					|
-| lh	| lh a0 123(a0)		| L		| a0 <= MEM[123 + a0][15:0]	| load half from memory					|
-| lw	| lw a0 123(a0)		| L		| a0 <= MEM[123 + a0][31:0]	| load word from memory					|
-| lbu	| lbu a0 123(a0)	| L		| a0 <= MEM[123 + a0][7:0]	| load byte from memory (unsigned)		|
-| lhu	| lhu a0 123(a0)	| L		| a0 <= MEM[123 + a0][15:0]	| load half from memory	(unsigned)		|
-| sb	| sb a0 123(a0)		| S		| MEM[123 + a0][7:0] <= a0	| store byte to memory					|
-| sh	| sh a0 123(a0)		| S		| MEM[123 + a0][15:0] <= a0	| store half to memory					|
-| sw	| sw a0 123(a0)		| S		| MEM[123 + a0][31:0] <= a0	| store word to memory					|
-| beq	| beq a0 a1 label	| B		| if (a0 == a1) goto label	| conditional jump to label				|
-| bne	| bne a0 a1 label	| B		| if (a0 != a1) goto label	| conditional jump to label				|
-| blt	| blt a0 a1 label	| B		| if (a0 < a1) goto label	| conditional jump to label				|
-| bge	| bge a0 a1 label	| B		| if (a0 >= a1) goto label	| conditional jump to label				|
-| bltu	| bltu a0 a1 label	| B		| if (a0 < a1) goto label	| conditional jump to label (unsigned)	|
-| bgeu	| bgeu a0 a1 label	| B		| if (a0 >= a1) goto label	| conditional jump to label (unsigned)	|
-| jal	| jal ra label		| J		| ra <= pc + 4, goto label	| unconditional jump to label with saving return address	|
-| jalr	| jalr ra 123(s0)	| J		| ra <= pc + 4, goto $\[s0 + 123\]	| jump and link to register		|
-| lui	| lui a0 123		| U		| a0 <= 123 << 12			| load upper immediate					|
-| auipc	| auipc a0 123		| U		| a0 <= pc + (123 << 12)	| add upper immediate to register		|
-| auipc	| auipc a0 123		| U		| a0 <= pc + (123 << 12)	| add upper immediate to register		|
-| ebreak| ebreak			| I		| meoc <= pc, mcause <= interrupt	| call interrupt handler		|
-| mret	| mret				| I		| pc <= mepc				| return from interrupt handler			|
-| csrrw	| csrrw a0 csr s0	| I		| a0 <= csr, csr <= s0		| read/write csr register				|
-| csrrs	| csrrs a0 csr s0	| I		| a0 <= csr, csr |= s0		| read/set bit to csr register			|
-| csrrc	| csrrc a0 csr s0	| I		| a0 <= csr, csr &= ~s0		| read/unsetset bit to csr register		|
-| li	| li a0 123			| -		| a0 <= 123					| load immediate to register			|
-| la	| la a0 label		| -		| a0 <= label				| load label address ti register		|
-| j		| j label			| -		| goto label				| jump to label without saving return address	|
+| Instr | Type | Opcode  | funct3 | funct7 | Explain | Comment |
+| ----- |:----:|:-------:|:------:|:------:| ------- | ------- |
+| lui   | U    | 0110111 |   -    |   -    |         |         |
+| auipc | U    | 0010111 |   -    |   -    |         |         |
+| jal   | J    | 1101111 |   -    |   -    |         |         |
+| jalr  | I    |    ^    |  000   |   -    |         |         |
+| beq   | B    | 1100011 |   -    |   -    |         |         |
+| bne   | B    |    ^    |   -    |   -    |         |         |
+| blt   | B    |    ^    |   -    |   -    |         |         |
+| bge   | B    |    ^    |   -    |   -    |         |         |
+| bltu  | B    |    ^    |   -    |   -    |         |         |
+| bgeu  | B    |    ^    |   -    |   -    |         |         |
+| lb    | I    | 0000011 |  000   |   -    |         |         |
+| lh    | I    |    ^    |  001   |   -    |         |         |
+| lb    | I    |    ^    |  010   |   -    |         |         |
+| lbu   | I    |    ^    |  100   |   -    |         |         |
+| lwu   | I    |    ^    |  101   |   -    |         |         |
+| sb    | S    | 0100011 |  000   |   -    |         |         |
+| sh    | S    |    ^    |  001   |   -    |         |         |
+| sw    | S    |    ^    |  010   |   -    |         |         |
+| addi  | I    | 0010011 |  000   |   -    |         |         |
+| slti  | I    |    ^    |  010   |   -    |         |         |
+| sltiu | I    |    ^    |  011   |   -    |         |         |
+| xori  | I    |    ^    |  100   |   -    |         |         |
+| ori   | I    |    ^    |  110   |   -    |         |         |
+| andi  | I    |    ^    |  111   |   -    |         |         |
+| slli  | R    | 0010011 |  001   |  0x0   |         |         |
+| srli  | R    |    ^    |  101   |  0x0   |         |         |
+| srai  | R    |    ^    |  101   |  0x20  |         |         |
+| add   | R    | 0110011 |  000   |  0x0   |         |         |
+| sub   | R    |    ^    |  000   |  0x20  |         |         |
+| sll   | R    |    ^    |  001   |  0x0   |         |         |
+| slt   | R    |    ^    |  010   |  0x0   |         |         |
+| sltu  | R    |    ^    |  011   |  0x0   |         |         |
+| xor   | R    |    ^    |  100   |  0x0   |         |         |
+| slr   | R    |    ^    |  101   |  0x0   |         |         |
+| sra   | R    |    ^    |  101   |  0x20  |         |         |
+| or    | R    |    ^    |  110   |  0x0   |         |         |
+| and   | R    |    ^    |  111   |  0x0   |         |         |
+| fence | I    | 0001111 |  000   |  0x0   |         |         |
+| fenceI| I    |    ^    |  001   |  0x0   |         |         |
+| ecall | I    | 1110011 |  000   |  0x0   |         |         |
+| ebreak| I    |    ^    |  000   |  0x1   |         |         |
+| csrrw | I    | 1110011 |  001   |  csr   |         |         |
+| csrrs | I    | 1110011 |  010   |  csr   |         |         |
+| csrrc | I    | 1110011 |  011   |  csr   |         |         |
+| csrrwi| I    | 1110011 |  101   |  csr   |         |         |
+| csrrsi| I    | 1110011 |  110   |  csr   |         |         |
+| csrrci| I    | 1110011 |  111   |  csr   |         |         |
+
+
