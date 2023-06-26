@@ -1,8 +1,13 @@
 # RISC-V CPU
 
-### implementation of RB32I in verilog
+## implementation of RB32I in verilog
 
-RISC-V single-stroke processor with i32 extension with support of hardware and software interrupts and DMA module for peripheral devices (in Verilog)
+RISC-V 32bit single-stroke processor with i32 extension with support of hardware and software interrupts and DMA module for peripheral devices (in Verilog)
+
+### Overview
+Processor has 32 bit ALU and standard 32 triple-ported register file with x0 always zero.
+It can execute basic binary code compiled from RISC-V assembly language.
+Processor uses Harvard architecture, so instructions are stored in instruction memory and program data is stored in main memory
 
 ### Supported instructions
 | Instr | Type | Opcode  | funct3 | funct7 | Explain                                | Comment |
@@ -55,5 +60,12 @@ RISC-V single-stroke processor with i32 extension with support of hardware and s
 | csrrsi| I    | 1110011 |  110   |  csr   | control status register set immidiate  |         |
 | csrrci| I    | 1110011 |  111   |  csr   | control status register clear immidiate|         |
 
-- fence and fenceI instructions are interpreted as NOP
-- ecall and ebreak instructions are raises trap
+- fence and fenceI instructions are interpreted as NOP due to sequential consistency of processor 
+- ecall and ebreak instructions are raises interruption
+
+
+### interruptions
+processor supports multilevel software and hardware interruptions with control status regissters manipulations.
+After hardware or software interrupt ...
+
+###
