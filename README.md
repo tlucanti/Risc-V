@@ -9,6 +9,56 @@ Processor has 32 bit ALU and standard 32 triple-ported register file with x0 alw
 It can execute basic binary code compiled from RISC-V assembly language.
 Processor uses Harvard architecture, so instructions are stored in instruction memory and program data is stored in main memory
 
+### Memory
+Processor has builtin main memory (inside the processor itself).
+Memory size is 0.5 kiB or 512 bytes or 128 32-bit words.
+Memory size can be increased up to 2^32 32-bit words or 16 GiB
+Processor has no protection in memory so, it is possible to overwrite existing intructions in RAM.
+
+### General Interface
+processor has 2 input wires:
+ - 1 bit clock
+ - 1 bit negative reset signal
+
+### Compilation
+
+### Start
+After start (or reset) processor loads instsructions from constant memory to
+RAM and sets its program counter to 0 address and starts to execute instructions
+
+### Interrpts
+Processor supports multilevel software and hardware interruptions with control status regissters manipulations.
+Processor supports two types of interrupts:
+ - hardware interrupts (caused by external devices)
+ - software interrupts (caused by ecall/ebreak instruction)
+Interrupt bus has no synchronization or any arbiter
+
+### Control Status Registers
+Processor has control status registers to keep information about interrupts.
+Interrupts can be disabled using interrupt mask stored in `mie` register
+When interrupt occurs its cause is written to CSR mcause register
+After interrupt program counter is set to value inside `mtvec` register added to cause of interrupt (`mcause` register value).
+Current program counter is saved to `mepc` register.
+Current context is saved on stack. Stack pointer is placed in `mscratch` register.
+Registers `mie`, `mtvec`, `mscratch` are should be set by user after processor started.
+
+### External devices
+Repository has a few builtin external devices
+ - Flash memory with same interface as builtin memory. Flash memory size is 8 32-bit words or 256 bytes.
+   Flash memory size can be increased up to 2^32 bytes or 2 GiB
+ - Keyboard implementation with 256 keys and interrupt support for pressed buttons
+ - Interrupt controller as external module
+
+### Memory interface
+Processor communicates with builtin main memory using control 3 bit bus and thee 32 bit data/address busses.
+Control bus has 5 states to select width and signedness of word in memory:
+ - 0b000 - signed 8 bit
+ - 0b001 - signed 16 bit
+ - 0b010 - 32 bit value
+ - 0b100 - unsigned 8 bit
+ - 0b101 - unsigned 16 bit
+Every access to memory is completed in one clock (as well as any other instruction)
+
 ### Supported instructions
 | Instr | Type | Opcode  | funct3 | funct7 | Explain                                | Comment |
 | ----- |:----:|:-------:|:------:|:------:| -------------------------------------- | ------- |
@@ -53,19 +103,20 @@ Processor uses Harvard architecture, so instructions are stored in instruction m
 | fenceI| I    |    ^    |  001   |  0x0   | memory fence                           |         |
 | ecall | I    | 1110011 |  000   |  0x0   | enviroment call                        |         |
 | ebreak| I    |    ^    |  000   |  0x1   | enviroment break                       |         |
-| csrrw | I    | 1110011 |  001   |  csr   | control status register read/write     |         |
-| csrrs | I    | 1110011 |  010   |  csr   | control status register set bits       |         |
-| csrrc | I    | 1110011 |  011   |  csr   | control status register clear bits     |         |
-| csrrwi| I    | 1110011 |  101   |  csr   | control status register write immidiate|         |
-| csrrsi| I    | 1110011 |  110   |  csr   | control status register set immidiate  |         |
-| csrrci| I    | 1110011 |  111   |  csr   | control status register clear immidiate|         |
+| csrrw | I    |    ^    |  001   |  csr   | control status register read/write     |         |
+| csrrs | I    |    ^    |  010   |  csr   | control status register set bits       |         |
+| csrrc | I    |    ^    |  011   |  csr   | control status register clear bits     |         |
+| csrrwi| I    |    ^    |  101   |  csr   | control status register write immidiate|         |
+| csrrsi| I    |    ^    |  110   |  csr   | control status register set immidiate  |         |
+| csrrci| I    |    ^    |  111   |  csr   | control status register clear immidiate|         |
+| mret  | I    |    ^    |  000   | 0x302  | return from interrupt                  |         |
 
-- fence and fenceI instructions are interpreted as NOP due to sequential consistency of processor 
+- fence and fenceI instructions are interpreted as NOP due to sequential consistency of processor
 - ecall and ebreak instructions are raises interruption
-
+- mret func7 value is need to be zero extended and set to imm[11:0] field
 
 ### interruptions
 processor supports multilevel software and hardware interruptions with control status regissters manipulations.
-After hardware or software interrupt ...
+After hardware or software interrupt occures
 
 ###
